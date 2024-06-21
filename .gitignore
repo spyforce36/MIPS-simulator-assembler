@@ -42,6 +42,7 @@
 *.idb
 *.pdb
 
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
@@ -50,3 +51,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+
+x64/
+simulator/x64/
+.vs/
+simulator/.vs/
