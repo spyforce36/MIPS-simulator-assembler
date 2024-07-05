@@ -24,13 +24,13 @@ size_t find_label(char* buffer, size_t curr_row, char** intermediate_parsing, ch
 		label_rows[*num_labels] = curr_row;
 		*num_labels = *num_labels + 1;
 	}
-	intermediate_parsing[curr_row] = buffer;
+	*intermediate_parsing = buffer;
 	if (strlen(buffer) == 0)
 	{
 		return curr_row;
 	}
-	is_I_command[curr_row] = strstr(buffer, "$imm") != NULL;
-	return is_I_command[curr_row] + 1;
+	*is_I_command = strstr(buffer, "$imm") != NULL;
+	return *is_I_command + 1;
 }
 
 
@@ -82,16 +82,14 @@ int convert_full_file(FILE * asm_ptr, FILE * machine_code_ptr)
 	while (fgets(all_buffers[ind_row_program_asm], MAX_ROW_LENGTH, asm_ptr)) {
 		printf("%s", all_buffers[ind_row_program_asm]);
 		new_row = parse_line(all_buffers[ind_row_program_asm], curr_row, 
-			intermediate_parsing, labels, label_rows, &num_labels, is_I_command);
+			&intermediate_parsing[ind_row_program_asm], labels, label_rows, &num_labels, &is_I_command[ind_row_program_asm]);
 		//write_line();
 		if (new_row > curr_row)
 		{
 			curr_row = new_row;
 			++ind_row_program_asm;
 		}
-
-	}	
-
+	}
 
 	return 0;
 }
