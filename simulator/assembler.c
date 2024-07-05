@@ -1,28 +1,30 @@
 // ConsoleApplication1.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-#define MAX_ROW_LENGTH 500
+//#define _CRT_SECURE_NO_WARNINGS
 
+#define MAX_ROW_LENGTH 500
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int convert_full_file(FILE * asm_ptr, FILE * machine_code_ptr)
 {
-	/*
-	for each_row
-	{
-		read_line();
-		parse_line();
-		write_line();
-	}
-	*/
+	size_t len = 0;
+	char buffer[MAX_ROW_LENGTH];
+	while (fgets(buffer, MAX_ROW_LENGTH, asm_ptr)) {
+		printf("%s", buffer);
+		//parse_line();
+		//write_line();
+
+	}		
+
 	return 0;
 }
 
 
+
 int main(int argc, char **argv)
-{
-	FILE *asm_ptr, *machine_code_ptr;
+{ // argv: assembler.exe program.asm memin.txt
+	FILE *asm_ptr = NULL, *machine_code_ptr  = NULL;
 
 	if (argc < 3)
 	{
@@ -30,10 +32,20 @@ int main(int argc, char **argv)
 		return 1;
 	}
 		
-	fopen_s(&asm_ptr,argv[1], 'r');
-	fopen_s(&machine_code_ptr, argv[2], 'w');
+	fopen_s(&machine_code_ptr, argv[2], "w");
+	if (machine_code_ptr == NULL)
+	{
+		printf("cannot open machine code file\n ");
+		return 2;
+	}
 
-	printf("%s\n", argv[1]);
+	fopen_s(&asm_ptr,argv[1], "r");
+	if (asm_ptr == NULL)
+	{ 
+		printf("cannot open assembly file\n ");
+		return 2;
+	}
+
 	convert_full_file(asm_ptr, machine_code_ptr);
 
 	if (asm_ptr != NULL)
