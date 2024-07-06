@@ -5,15 +5,18 @@
 #define MAX_NUM_ROWS_MEMORY 10 //4096
 #define ROW_LENGTH_MEMORY 5
 #define MAX_LABEL_LENGTH 50
+#define WORD_COMMAND 2
+#define I_COMMAND 1
+#define R_COMMAND 0
+
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 size_t find_label(char* buffer, size_t * num_commands, char** intermediate_parsing, char** labels,
-	size_t* label_rows, size_t* num_labels, size_t* is_I_command)
+	size_t* label_rows, size_t* num_labels, size_t* type_command)
 {
-	//char label[MAX_LABEL_LENGTH];
 	char* label_end;
 	label_end = strchr(buffer, ':');
 	if (label_end != NULL) // if it's not null that means that the label exists
@@ -29,10 +32,14 @@ size_t find_label(char* buffer, size_t * num_commands, char** intermediate_parsi
 	{
 		return 0;
 	}
-	*is_I_command = strstr(buffer, "$imm") != NULL;
+	*type_command = strstr(buffer, "$imm") != NULL;
 	if (strstr(buffer, ".word") == NULL)
 	{
-		*num_commands = *num_commands + *is_I_command + 1;
+		*num_commands = *num_commands + *type_command + 1;
+	}
+	else
+	{
+		*type_command = WORD_COMMAND;
 	}
 	return 1;
 }
@@ -40,7 +47,7 @@ size_t find_label(char* buffer, size_t * num_commands, char** intermediate_parsi
 
 
 size_t parse_line(char* buffer, size_t *num_commands, char ** intermediate_parsing, char ** labels,
-	size_t * label_rows, size_t * num_labels, size_t * is_I_command)
+	size_t * label_rows, size_t * num_labels, size_t * type_command)
 {
 	/*
 	*	input: buffer: line
@@ -65,34 +72,60 @@ size_t parse_line(char* buffer, size_t *num_commands, char ** intermediate_parsi
 	//tokens2 = strtok(tokens, ",");
 	
 	is_commend_or_word = find_label(buffer, num_commands,
-		intermediate_parsing, labels, label_rows, num_labels, is_I_command);
+		intermediate_parsing, labels, label_rows, num_labels, type_command);
 	return is_commend_or_word;
 	
 }
 
+int create_memory(char** all_buffers, char** intermediate_parsing, char** labels,
+	size_t* label_rows, size_t num_labels, size_t* type_command, size_t num_commands_include_word, FILE * machine_code_ptr)
+{
+	size_t ind = 0;
+	char memory_code[MAX_NUM_ROWS_MEMORY][ROW_LENGTH_MEMORY];
 
+	for (ind = 0; ind < num_commands_include_word; ind++)
+	{
+		switch (type_command[ind]) {
+		case R_COMMAND:
+			// code block
+			break;
+		case I_COMMAND:
+			// There are labels only in I command
+
+			break;
+		default: // word command
+			// code block
+		}
+
+	}
+
+
+	return 0;
+}
 
 int convert_full_file(FILE * asm_ptr, FILE * machine_code_ptr)
 {
 	size_t num_commands = 0, next_row = 0, num_labels = 0; // the current row in the memory file not input file
 	char all_buffers[MAX_NUM_ROWS_MEMORY][MAX_ROW_LENGTH]; // the sentence we read from the file.asm
-	//char * parsed_line; 
 	char* intermediate_parsing[MAX_NUM_ROWS_MEMORY]; // all the sentences after removing hashtag and empty rows etc
 	char* labels[MAX_NUM_ROWS_MEMORY]; // list of labels in our c code
 	size_t label_rows[MAX_NUM_ROWS_MEMORY]; // list of rows numbers of labels in memory file
-	size_t is_I_command[MAX_NUM_ROWS_MEMORY]; // list of is I command for each command
+	size_t type_command[MAX_NUM_ROWS_MEMORY]; // list of is I command for each command
 	size_t ind_row_program_asm = 0, is_commend_or_word = 0;
 
 	while (fgets(all_buffers[ind_row_program_asm], MAX_ROW_LENGTH, asm_ptr)) {
 		printf("%s", all_buffers[ind_row_program_asm]);
 		is_commend_or_word = parse_line(all_buffers[ind_row_program_asm], &num_commands,
-			&intermediate_parsing[ind_row_program_asm], labels, label_rows, &num_labels, &is_I_command[ind_row_program_asm]);
+			&intermediate_parsing[ind_row_program_asm], labels, label_rows, &num_labels, &type_command[ind_row_program_asm]);
 		//write_line();
 		if (is_commend_or_word > 0)
 		{
 			++ind_row_program_asm;
 		}
 	}
+
+	create_memory(all_buffers,
+		intermediate_parsing, labels, label_rows, num_labels, type_command, ind_row_program_asm, machine_code_ptr);
 
 	return 0;
 }
