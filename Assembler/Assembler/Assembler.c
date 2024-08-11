@@ -197,9 +197,9 @@ void destroy_mem(Memory* mem) {
 // the code of the first iteration. goes trough the file row by row and looks for labels, then adds them to the label list
 label* createLabelList(FILE *asembl) {
     // rowIndex-the code row's index. where the PC will go after reading the label
-	// k is the char index for label name read, j is the index in the label name string we are building, option is determining if it's a label only line or a label + command line
+	// k is the char index for label name read, j is the index in the label name string we are building, only_label_line is determining if it's a label only line or a label + command line
 	// counter will be the line number in the new hexadecimal code. it will go up when a line that gets translated is found
-    int rowIndex = 0, k, j, option, counter = 0;
+    int rowIndex = 0, k, j, only_label_line, counter = 0;
     // line the current line being read, tav1 is the first char and i used to check for remarks, // tav - current char when reading label name
 	// label_line will contain the name of the label once iteration is complete, dots are used to say "this is a label"
 	char line[MAX_LINE], tav1 ,tav, lable_line[50], dots[50];
@@ -208,7 +208,7 @@ label* createLabelList(FILE *asembl) {
     // go all the way trough the file
     while (!feof(asembl)) {
         fgets(line, MAX_LINE, asembl);  // read a command from the assembler file
-        option = 0;  // reset option
+        only_label_line = 0;  // reset only_label_line
         if (strcmp(line, "\n") == 0) continue;  //If line is blank, continue
         tav1 = line[0];
         if (tav1 == '#') continue;  //If line is Remark, continue
@@ -233,14 +233,22 @@ label* createLabelList(FILE *asembl) {
             lable_line[j] = '\0';              // label name is null terminated
             k++;   // Check if the line is lable line only by seeing if there are only spaces and tabs till the end
             while ((line[k] == ' ') || (line[k] == '\t'))  k++;
-			option = ((line[k] == '\n') || (line[k] == '#'));  // option is 1 on label only line, otherwise 0
+			only_label_line = ((line[k] == '\n') || (line[k] == '#'));  // only_label_line is 1 on label only line, otherwise 0
             head = add(head, lable_line, counter);   // finally we add the label to label list
-            if (option == 1) counter = counter - 1;  // Only label line - add label and decrement counter
         }
         k = 0; // Check if the current line is space line using k - most commands in fib.asm and our files start with a tab or a space
         if ((line[k] == '\t') || (line[k] == ' '))  k++;
         if (line[k] == '\n')  continue;
-        counter++;  // increment hexa file line counter
+        if (only_label_line == 1) continue;  // Only label line - do not change counter
+        if (strstr(line, "$imm") != NULL)
+        {
+            counter = counter + 2; // I command
+        }
+        else
+        {
+            counter++;  // increment hexa file line counter
+        }
+
     }
     return head;   // return the list
 }
