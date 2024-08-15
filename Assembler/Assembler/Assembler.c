@@ -98,12 +98,14 @@ typedef struct MemoryLine {
     char imm[50];
     // position of character in line
     int pos;
+	// is_I_command
+	int is_I_command;
     // memory will also be a linked list to support infinite length programs
     struct MemoryLine* next;
 }MemoryLine;
 
 // creates new memory line with no "next"
-MemoryLine* create_line(char opcode[6], char rd[6], char rs[6], char rt[6], char imm[50], int pos) {
+MemoryLine* create_line(char opcode[6], char rd[6], char rs[6], char rt[6], char imm[50], int is_I_command, int pos) {
     // allocate memory for the label and create a pointer to it
     MemoryLine* new_line  = (MemoryLine*)malloc(sizeof(MemoryLine));
     // if allocation successful. insert data to label
@@ -114,6 +116,7 @@ MemoryLine* create_line(char opcode[6], char rd[6], char rs[6], char rt[6], char
         strcpy(new_line->rs, rs);
         strcpy(new_line->rt, rt);
         strcpy(new_line->imm, imm);
+        new_line->is_I_command = is_I_command;
         new_line->pos = pos;
         // no next defined
         new_line->next = NULL;
@@ -122,12 +125,12 @@ MemoryLine* create_line(char opcode[6], char rd[6], char rs[6], char rt[6], char
 }
 
 // adds line to memory structure. this line will be added to the end to let the writing run it like an array
-MemoryLine* add_line(MemoryLine* head, char opcode[6], char rd[6], char rs[6], char rt[6], char imm[50], int pos)
+MemoryLine* add_line(MemoryLine* head, char opcode[6], char rd[6], char rs[6], char rt[6], char imm[50], int is_I_command, int pos)
 {
     // the last line as for now
     MemoryLine* tail;
     // create a line
-    MemoryLine* new_line = create_line(opcode, rd, rs, rt, imm, pos);
+    MemoryLine* new_line = create_line(opcode, rd, rs, rt, imm, is_I_command, pos);
     // if the new line is null. do nothing
     if (new_line == NULL)
         return NULL;
@@ -288,7 +291,7 @@ MemoryLine *specialword(MemoryLine* head, char line[MAX_LINE], int *pos1, int *k
 	// now. we will save the command in the memory list. NONO will be used as an indicator when writing to turn the command into a .word
 	char nono[5] = "NONO"; // a string used to copy nono to required places. fifth char is null
 	strcpy(nono, "NONO"); strcpy(nono, "NONO"); strcpy(nono, "NONO"); strcpy(nono, "NONO");
-	head = add_line(head, nono, nono, nono, nono, wordN, pos);  // save line to line list. wordN - the immediate value, is used as the data
+	head = add_line(head, nono, nono, nono, nono, wordN, 0, pos);  // save line to line list. wordN - the immediate value, is used as the data
 	if (pos > *pos1) *pos1 = pos;  // update the location of the end of the memory
 	return head;
 }
@@ -368,6 +371,8 @@ void readimmd(char line[MAX_LINE], char *imm, int *k){
 // k - index of char being read. is processed as we go so that's why a pointer
 MemoryLine *readLine(char *line, int *pos1, int *i, MemoryLine *head, int *k) {
 	char option[6], rd[6], rs[6], rt[6], imm[50]; // the line's properties
+	int is_I_command = strstr(line, "$imm") != NULL; 
+
 	readorder(line, option, k);					// read the opcode
 	readrdst(line, rd, k);                       // Read rd
 	readdollar(line, k);                           // wait for dollar sign
@@ -375,7 +380,8 @@ MemoryLine *readLine(char *line, int *pos1, int *i, MemoryLine *head, int *k) {
 	readdollar(line, k);                           // wait for dollar sign
 	readrdst(line, rt, k);                    // Read rt
 	readimmd(line, imm, k);                 //handle immediate
-	head = add_line(head, option, rd, rs, rt, imm, *i);	*i = *i + 1;					// save line to line list
+
+	head = add_line(head, option, rd, rs, rt, imm, is_I_command, *i);	*i = *i + 1;					// save line to line list
 	if (*i > *pos1) *pos1 = *i;  //Update last line position
 	return head;
 }
@@ -392,6 +398,7 @@ Memory* SecondRun(FILE* file) {
 	char line[MAX_LINE], tav1, * dots = ":";
     MemoryLine* head = NULL;  // the Memory list's head. it will contain info about each memory line in the end
     while ((fgets(line, MAX_LINE, file)) != NULL) { // the loop reads the file line by line. and upon reaching null it stops as that's where the file ends
+		printf("line in second run: %s \n", line);
         if (strcmp(line, "\n") == 0) continue;  // in case of a Blank line, go
         tav1 = line[0];          // get first line
         if (tav1 == '#') continue;  // in case of a Remark line, go
@@ -417,6 +424,7 @@ Memory* SecondRun(FILE* file) {
 			if (line[k] == '#')	continue;
 			if (i > pos1) pos1 = i;  //Update last line position
 		}
+
 		else// Order line only
 		{
 			k = 0;
@@ -558,12 +566,12 @@ void PrintDataToFile(Memory* mem, FILE *memin)
 		if (currentLine == NULL) fprintf(memin, "0"); 		// Printing Rt
 		else printrdrsrt(currentLine->rt, memin,&num);
 		// a check wheter to print the immediate and skip .word lines
-		if (currentLine == NULL) fprintf(memin, "%03X", 0 & 0xfff); // on a null line. print zero to immediate
-		else if(strcmp(currentLine->opcode, "NONO") != 0)  // now print if satisfied
+		if ((currentLine != NULL) && (currentLine->is_I_command == 1))  // now print if satisfied
 		{
+			fprintf(memin, "\n");
 			if ((currentLine->imm[0] == '0') && ((currentLine->imm[1] == 'x') || (currentLine->imm[1] == 'X'))) num = strtol(currentLine->imm, NULL, 16);  //Check if immidiate in hex
 			else num = atoi(currentLine->imm);
-			fprintf(memin, "%03X", num & 0xfff);  //Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
+			fprintf(memin, "%05X", num & 0xfffff);  //Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
 		}
 		if (i != mem->last) fprintf(memin, "\n");  //Print \n except the last line
 		i++;  // go to next line
