@@ -554,7 +554,7 @@ void PrintDataToFile(Memory* mem, FILE *memin)
 					num = strtol(currentLine->imm, NULL, 16);
 				else  //Imiddiate is decimal
 					num = atoi(currentLine->imm);	
-				fprintf(memin, "%08X", num);  //Print immidiate in hex
+				fprintf(memin, "%05X", num);  //Print immidiate in hex
 			}
 		}
 		else if (!flag) // if there is nothing print a zero
@@ -572,9 +572,14 @@ void PrintDataToFile(Memory* mem, FILE *memin)
 			if ((currentLine->imm[0] == '0') && ((currentLine->imm[1] == 'x') || (currentLine->imm[1] == 'X'))) num = strtol(currentLine->imm, NULL, 16);  //Check if immidiate in hex
 			else num = atoi(currentLine->imm);
 			fprintf(memin, "%05X", num & 0xfffff);  //Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
+			i = i + 2;
 		}
-		if (i != mem->last) fprintf(memin, "\n");  //Print \n except the last line
-		i++;  // go to next line
+		else
+		{
+			i++;
+		}
+
+		if (i < mem->last + 1) fprintf(memin, "\n");  //Print \n except the last line
 	}
 }
 
