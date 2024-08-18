@@ -4,6 +4,10 @@
 #include <string.h>
 // a like can have 500 chars according to instructions
 #define MAX_LINE 500
+#define MAX_ROW_LENGTH 500
+#define MAX_NUM_ROWS_MEMORY 4096
+#define ROW_LENGTH_MEMORY 5
+#define MAX_LABEL_LENGTH 50
 
 // first part - utility
 
@@ -267,6 +271,9 @@ label* createLabelList(FILE *asembl) {
 MemoryLine *specialword(MemoryLine* head, char line[MAX_LINE], int *pos1, int *k) {
 	char wordP[15], wordN[15]; // wordP - address, wordN - data
 	int j = 0; // index for string we copy to
+	int pos = 0; // pos - current line address, can be hexadecimal or decimal
+	char nono[6] = "NONO"; // a string used to copy nono to required places. fifth char is null
+
 	*k = 0;             // reset k index
 	while (line[*k] != ' ') *k=*k+1;            // go past all the spaces
 	*k = *k + 1;
@@ -283,14 +290,12 @@ MemoryLine *specialword(MemoryLine* head, char line[MAX_LINE], int *pos1, int *k
 		j = j + 1; *k = *k + 1;
 	}
 	wordN[j] = '\0';
-	int pos = 0; // pos - current line address, can be hexadecimal or decimal
 	if (wordP[0] == '0') { //  change Address int. the if block considers an hexadecimal input
 		if (wordP[1] == 'x' || wordP[1] == 'X') pos = strtol(wordP, NULL, 16);
 	}
 	else pos = atoi(wordP); // and the else blocks considers a decimal input
 	// now. we will save the command in the memory list. NONO will be used as an indicator when writing to turn the command into a .word
-	char nono[5] = "NONO"; // a string used to copy nono to required places. fifth char is null
-	strcpy(nono, "NONO"); strcpy(nono, "NONO"); strcpy(nono, "NONO"); strcpy(nono, "NONO");
+	strcpy(nono, "NONO"); 
 	head = add_line(head, nono, nono, nono, nono, wordN, 0, pos);  // save line to line list. wordN - the immediate value, is used as the data
 	if (pos > *pos1) *pos1 = pos;  // update the location of the end of the memory
 	return head;
@@ -338,7 +343,6 @@ void readrdst(char line[MAX_LINE], char *rdst, int *k){
 		*k=*k+1;
 	}
 	rdst[j] = '\0';// null terminate
-	return rdst; // return the string
 }
 // reads immediate value
 // line - assembly line being read
@@ -360,7 +364,6 @@ void readimmd(char line[MAX_LINE], char *imm, int *k){
 		*k=*k+1;
 	}
 	imm[j] = '\0';
-	return imm;
 }
 
 // reads line of memory and adds to memory line list "head
@@ -444,96 +447,96 @@ Memory* SecondRun(FILE* file) {
 // rdst - register name to print
 // memin - current file pointer
 // num - will be flipped to zero if it's a .world
-void printrdrsrt(char *rdst, FILE *memin, int *num)
+void printrdrsrt(char *rdst, char *memin, int *num)
 { // basically a big if block that checks the name of the register and converts it to a number
 	if (strcmp(rdst, "$zero") == 0)
-		fprintf(memin, "0");
+		memcpy(memin, "0", 1);
 	else if (strcmp(rdst, "$imm") == 0)
-		fprintf(memin, "1");
+		memcpy(memin, "1", 1);
 	else if (strcmp(rdst, "$v0") == 0)
-		fprintf(memin, "2");
+		memcpy(memin, "2", 1);
 	else if (strcmp(rdst, "$a0") == 0)
-		fprintf(memin, "3");
+		memcpy(memin, "3", 1);
 	else if (strcmp(rdst, "$a1") == 0)
-		fprintf(memin, "4");
+		memcpy(memin, "4", 1);
 	else if (strcmp(rdst, "$a2") == 0)
-		fprintf(memin, "5");
+		memcpy(memin, "5", 1);
 	else if (strcmp(rdst, "$a3") == 0)
-		fprintf(memin, "6");
+		memcpy(memin, "6", 1);
 	else if (strcmp(rdst, "$t0") == 0)
-		fprintf(memin, "7");
+		memcpy(memin, "7", 1);
 	else if (strcmp(rdst, "$t1") == 0)
-		fprintf(memin, "8");
+		memcpy(memin, "8", 1);
 	else if (strcmp(rdst, "$t2") == 0)
-		fprintf(memin, "9");
+		memcpy(memin, "9", 1);
 	else if (strcmp(rdst, "$s0") == 0)
-		fprintf(memin, "A");
+		memcpy(memin, "A", 1);
 	else if (strcmp(rdst, "$s1") == 0)
-		fprintf(memin, "B");
+		memcpy(memin, "B", 1);
 	else if (strcmp(rdst, "$s2") == 0)
-		fprintf(memin, "C");
+		memcpy(memin, "C", 1);
 	else if (strcmp(rdst, "$gp") == 0)
-		fprintf(memin, "D");
+		memcpy(memin, "D", 1);
 	else if (strcmp(rdst, "$sp") == 0)
-		fprintf(memin, "E");
+		memcpy(memin, "E", 1);
 	else if (strcmp(rdst, "$ra") == 0)
-		fprintf(memin, "F");
+		memcpy(memin, "F", 1);
 	else if (strcmp(rdst, "NONO") == 0)
 		*num = 0;
 	else
-		fprintf(memin, "0");
+		memcpy(memin, "0", 1);
 }
 
 ////helpful function for printdatatofile - prints opcode
 // opc - opcode string
 // memin - output file pointer
 // returns 1 if opcode was printed
-int printopcode(char *opc, FILE *memin)
+int printopcode(char *opc, char *memin)
 {
 	if (strcmp(opc, "add") == 0) {
-		fprintf(memin, "00"); return 1;}
+		memcpy(memin, "00", 2); return 1;}
 	else if (strcmp(opc, "sub") == 0) {
-		fprintf(memin, "01"); return 1;}
+		memcpy(memin, "01", 2); return 1;}
 	else if (strcmp(opc, "mul") == 0) {
-		fprintf(memin, "02"); return 1;}
+		memcpy(memin, "02", 2); return 1;}
 	else if (strcmp(opc, "and") == 0) {
-		fprintf(memin, "03"); return 1;}
+		memcpy(memin, "03", 2); return 1;}
 	else if (strcmp(opc, "or") == 0) {
-		fprintf(memin, "04"); return 1;}
+		memcpy(memin, "04", 2); return 1;}
 	else if (strcmp(opc, "xor") == 0) {
-		fprintf(memin, "05"); return 1;}
+		memcpy(memin, "05", 2); return 1;}
 	else if (strcmp(opc, "sll") == 0) {
-		fprintf(memin, "06"); return 1;}
+		memcpy(memin, "06", 2); return 1;}
 	else if (strcmp(opc, "sra") == 0) {
-		fprintf(memin, "07"); return 1;}
+		memcpy(memin, "07", 2); return 1;}
 	else if (strcmp(opc, "srl") == 0) {
-		fprintf(memin, "08"); return 1;}
+		memcpy(memin, "08", 2); return 1;}
 	else if (strcmp(opc, "beq") == 0) {
-		fprintf(memin, "09"); return 1;}
+		memcpy(memin, "09", 2); return 1;}
 	else if (strcmp(opc, "bne") == 0) {
-		fprintf(memin, "0A"); return 1;}
+		memcpy(memin, "0A", 2); return 1;}
 	else if (strcmp(opc, "blt") == 0) {
-		fprintf(memin, "0B"); return 1;}
+		memcpy(memin, "0B", 2); return 1;}
 	else if (strcmp(opc, "bgt") == 0) {
-		fprintf(memin, "0C"); return 1;}
+		memcpy(memin, "0C", 2); return 1;}
 	else if (strcmp(opc, "ble") == 0) {
-		fprintf(memin, "0D"); return 1;}
+		memcpy(memin, "0D", 2); return 1;}
 	else if (strcmp(opc, "bge") == 0) {
-		fprintf(memin, "0E"); return 1;}
+		memcpy(memin, "0E", 2); return 1;}
 	else if (strcmp(opc, "jal") == 0) {
-		fprintf(memin, "0F"); return 1;}
+		memcpy(memin, "0F", 2); return 1;}
 	else if (strcmp(opc, "lw") == 0) {
-		fprintf(memin, "10"); return 1;}
+		memcpy(memin, "10", 2); return 1;}
 	else if (strcmp(opc, "sw") == 0) {
-		fprintf(memin, "11"); return 1;}
+		memcpy(memin, "11", 2); return 1;}
 	else if (strcmp(opc, "reti") == 0) {
-		fprintf(memin, "12"); return 1;}
+		memcpy(memin, "12", 2); return 1;}
 	else if (strcmp(opc, "in") == 0) {
-		fprintf(memin, "13"); return 1;}
+		memcpy(memin, "13", 2); return 1;}
 	else if (strcmp(opc, "out") == 0) {
-		fprintf(memin, "14"); return 1;}
+		memcpy(memin, "14", 2); return 1;}
 	else if (strcmp(opc, "halt") == 0) {
-		fprintf(memin, "15"); return 1;}
+		memcpy(memin, "15", 2); return 1;}
 	else // on .word
 		return 0;
 }
@@ -542,45 +545,66 @@ int printopcode(char *opc, FILE *memin)
 void PrintDataToFile(Memory* mem, FILE *memin)
 {
 	// i - memory index, num - word for .word
-	int i = 0, num = 0; int flag=0;
-	while (mem->head != NULL && i <= mem->last)	{
-		MemoryLine *currentLine = getAtPos(mem->head, i); // get the current line's data once. this will reduce the code's execution time. allowing it to build apps much more quickly
+	MemoryLine *currentLine;
+	char memory_code[MAX_NUM_ROWS_MEMORY][ROW_LENGTH_MEMORY];
+	char * print_char;
+	int i = 0, num = 0, flag=0, idx_line_in_memory = 0;
+	int is_word = 0;
+
+	currentLine = mem->head;
+	while (currentLine != NULL)	{
+		is_word = 0;
+		// get the current line's data once. this will reduce the code's execution time. allowing it to build apps much more quickly
 		// Printing Opcode. if data for the ith row does not exist print a zero
-		if (currentLine == NULL) fprintf(memin, "00");// if no opcode print 2 zeros
-		else flag=printopcode(currentLine->opcode, memin); // print the opcode and return if it was printed
+		if (currentLine == NULL) 
+		{
+			memcpy(memory_code[idx_line_in_memory], "00", 2);
+		}
+		// if no opcode print 2 zeros
+		else flag=printopcode(currentLine->opcode, memory_code[idx_line_in_memory]); // print the opcode and return if it was printed
 		if (!flag && currentLine != NULL) {// if there is no opcode. this block of code is used to get the word for the .word command
 			if ((strcmp(currentLine->opcode, "NONO") == 0)) {
 				if ((currentLine->imm[0] == '0') && ((currentLine->imm[1] == 'x') || (currentLine->imm[1] == 'X'))) 	
 					num = strtol(currentLine->imm, NULL, 16);
 				else  //Imiddiate is decimal
 					num = atoi(currentLine->imm);	
-				fprintf(memin, "%05X", num);  //Print immidiate in hex
+				sprintf(memory_code[currentLine->pos], "%05X", num);  //Print immidiate in hex
+				is_word = 1;
 			}
 		}
 		else if (!flag) // if there is nothing print a zero
-			fprintf(memin, "00"); 
-		if (currentLine == NULL) fprintf(memin, "0"); // Printing Rd
-		else printrdrsrt(currentLine->rd, memin,&num);
-		if (currentLine == NULL) fprintf(memin, "0"); 		// Printing Rs
-		else printrdrsrt(currentLine->rs, memin,&num);
-		if (currentLine == NULL) fprintf(memin, "0"); 		// Printing Rt
-		else printrdrsrt(currentLine->rt, memin,&num);
+			memcpy(&memory_code[idx_line_in_memory][2], "00", 2); 
+		if (currentLine == NULL) memory_code[idx_line_in_memory][2] = '0'; // Printing Rd
+		else printrdrsrt(currentLine->rd, &memory_code[idx_line_in_memory][2],&num);
+		if (currentLine == NULL) memory_code[idx_line_in_memory][3] = '0'; 		// Printing Rs
+		else printrdrsrt(currentLine->rs, &memory_code[idx_line_in_memory][3],&num);
+		if (currentLine == NULL) memory_code[idx_line_in_memory][4] = '0'; 		// Printing Rt
+		else printrdrsrt(currentLine->rt, &memory_code[idx_line_in_memory][4],&num);
 		// a check wheter to print the immediate and skip .word lines
 		if ((currentLine != NULL) && (currentLine->is_I_command == 1))  // now print if satisfied
 		{
-			fprintf(memin, "\n");
+			idx_line_in_memory ++;
+			//fprintf(memin, "\n");
 			if ((currentLine->imm[0] == '0') && ((currentLine->imm[1] == 'x') || (currentLine->imm[1] == 'X'))) num = strtol(currentLine->imm, NULL, 16);  //Check if immidiate in hex
 			else num = atoi(currentLine->imm);
-			fprintf(memin, "%05X", num & 0xfffff);  //Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
-			i = i + 2;
+			sprintf(memory_code[idx_line_in_memory], "%05X", num & 0xfffff);			
+			//Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
+		}
+		if (is_word==0)
+			idx_line_in_memory++;
+		currentLine = currentLine->next;
+	}
+
+	for (i=0; i<mem->last; i++)
+	{
+		if (memory_code[i][0] == '\0')
+		{
+			fprintf(memin, "%05X\n", 0);
 		}
 		else
-		{
-			i++;
-		}
-
-		if (i < mem->last + 1) fprintf(memin, "\n");  //Print \n except the last line
+			fprintf(memin, "%c%c%c%c%c\n", memory_code[i][0], memory_code[i][1], memory_code[i][2], memory_code[i][3], memory_code[i][4]);
 	}
+	fprintf(memin, "%c%c%c%c%c", memory_code[i][0], memory_code[i][1], memory_code[i][2], memory_code[i][3], memory_code[i][4]);
 }
 
 // a label switch function that runs between the second run and the write. changes label names in the memory structure to thier locations taken
