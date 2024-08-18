@@ -637,8 +637,8 @@ void LableChange(MemoryLine* head, label* lb)
 int main(int argc, char* argv[]) {
     // open the input file. doing so in the main function will allow us to have infinite length file names
     // why i call it "asembl"? because of what it is
-    // FILE *asembl = fopen(argv[1], "r");
-	FILE *asembl = fopen("program.asm", "r");
+    FILE *asembl = fopen(argv[1], "r");
+	//FILE *asembl = fopen("program.asm", "r");
     // leave if null file is supplied
     if (asembl == NULL) {
         exit(1);
@@ -648,7 +648,7 @@ int main(int argc, char* argv[]) {
     // close the file from the first iteration
     fclose(asembl);
     // and reopen it for the second
-    asembl = fopen("program.asm", "r");
+    asembl = fopen(argv[1], "r");
     // another null check in case something happend
     if (asembl == NULL) {
         exit(1);
@@ -660,7 +660,7 @@ int main(int argc, char* argv[]) {
 	LableChange(memory->head, labels); // Change labels from words to numbers
 
 	// Write Data to file
-	FILE* memin = fopen("memin.txt", "w");
+	FILE* memin = fopen(argv[2], "w");
 	if (memin == NULL)
 		exit(1);
 	PrintDataToFile(memory, memin);

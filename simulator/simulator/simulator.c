@@ -1,5 +1,4 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +8,9 @@
 
 // a line is always smaller than 10 chars
 #define MAX_LINE 10
+#define HALT_COMMAND 21
+#define IMM_REG 1
+#define NUM_PIXELS 256
 // 65536 is long enough for most of the simulator's input memories.
 // we didn't make it support infinite code because we didn't have tile to implement it
 #define MAX_FILE 65536
@@ -76,7 +78,7 @@ Print_To_Trace(FILE* trace, int pc, char* line, int Reg_Array[]) {
 	// hexval - hexadcimal value of current row
 	char hexval[9], instruction[8], * inst = instruction;
 	// write hexadecimal PC
-	sprintf(hexval, "%08X", pc);
+	sprintf(hexval, "%03X", pc);
 	// write hexadecimal pc in trace
 	fputs(hexval, trace);
 	// write a space to the file
@@ -142,7 +144,7 @@ void updatehwRegTrace(unsigned int cycle, int action, int reg, unsigned int* ioR
 	}
 	// the names of the IO registers
 	char names[18][50] = { " irq0enable "," irq1enable "," irq2enable "," irq0status "," irq1status "," irq2status "," irqhandler "," irqreturn "," clks "," leds ",
-		" display "," timerEnable "," timerCurrent "," timerMax "," diskcmd "," disksector "," diskbuffer "," diskstatus " };
+		" display7seg "," timerEnable "," timerCurrent "," timerMax "," diskcmd "," disksector "," diskbuffer "," diskstatus "," reserved ", " monitoraddr ", " monitordata ", " monitorcmd " };
 	// write the register's name
 	strcat(toWrite, names[reg]);
 	// now convert the register value. the bitmask is an extention to 8 bits
@@ -211,6 +213,14 @@ typedef struct MemoryLine {
 
 // each opcode function takes integers of the instruction parameters, the current pc and line data struct. and returns the pc after.
 // arithmetic functions take no more than that
+int update_pc(int pc, MemoryLine* current)
+{
+	if ((current->rd==IMM_REG)||(current->rs==IMM_REG)||(current->rt==IMM_REG))
+		pc+=2;
+	else
+		pc++;
+	return pc;
+}
 
 // this executes "add" instructions
 // current - all instruction variables
@@ -220,7 +230,7 @@ typedef struct MemoryLine {
 int add(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 0) { //ADD instruction
 		rege[current->rd] = rege[current->rs] + rege[current->rt];
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -233,7 +243,14 @@ int add(MemoryLine* current, long pc, int* rege) {
 int sub(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 1) { //SUB instruction
 		rege[current->rd] = rege[current->rs] - rege[current->rt];
-		pc += 1;
+		pc = update_pc(pc, current);
+	}
+	return pc;
+}
+int mul (MemoryLine* current, long pc, int* rege) {
+	if (current->opcode == 2) {//and instruction
+		rege[current->rd] = (rege[current->rs] * rege[current->rt]);
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -244,9 +261,9 @@ int sub(MemoryLine* current, long pc, int* rege) {
 // rege - register array
 // returns pc after execution
 int and (MemoryLine* current, long pc, int* rege) {
-	if (current->opcode == 2) {//and instruction
+	if (current->opcode == 3) {//and instruction
 		rege[current->rd] = (rege[current->rs] & rege[current->rt]);
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -257,9 +274,16 @@ int and (MemoryLine* current, long pc, int* rege) {
 // rege - register array
 // returns pc after execution
 int or (MemoryLine* current, long pc, int* rege) {
-	if (current->opcode == 3) { //or instruction
+	if (current->opcode == 4) { //or instruction
 		rege[current->rd] = (rege[current->rs] | rege[current->rt]);
-		pc += 1;
+		pc = update_pc(pc, current);
+	}
+	return pc;
+}
+int xor (MemoryLine* current, long pc, int* rege) {
+	if (current->opcode == 5) { //or instruction
+		rege[current->rd] = (rege[current->rs] ^ rege[current->rt]);
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -270,9 +294,9 @@ int or (MemoryLine* current, long pc, int* rege) {
 // rege - register array
 // returns pc after execution
 int sll(MemoryLine* current, long pc, int* rege) {
-	if (current->opcode == 4) { //sll instruction
+	if (current->opcode == 6) { //sll instruction
 		rege[current->rd] = (rege[current->rs] << rege[current->rt]);
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -283,10 +307,10 @@ int sll(MemoryLine* current, long pc, int* rege) {
 // rege - register array
 // returns pc after execution
 int sra(MemoryLine* current, long pc, int* rege) {
-	if (current->opcode == 5) { //sra instruction. uses the normal >> because
+	if (current->opcode == 7) { //sra instruction. uses the normal >> because
 	// all values are signed
 		rege[current->rd] = (rege[current->rs] >> rege[current->rt]);
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -297,7 +321,7 @@ int sra(MemoryLine* current, long pc, int* rege) {
 // rege - register array
 // returns pc after execution
 int srl(MemoryLine* current, long pc, int* rege) {
-	if (current->opcode == 6) { //srl instruction, uses a special code
+	if (current->opcode == 8) { //srl instruction, uses a special code
 		int size = sizeof(int);
 		// shift
 		// deal with the zero case
@@ -307,7 +331,7 @@ int srl(MemoryLine* current, long pc, int* rege) {
 			rege[current->rd] = (rege[current->rs] >> rege[current->rt]) & ~(((rege[current->rs] >> (size << 3) - 1) << (size << 3) - 1)) >> (rege[current->rt] - 1);
 		if (current->rd == 0)
 			rege[current->rd] = 0;
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -322,7 +346,7 @@ int srl(MemoryLine* current, long pc, int* rege) {
 // file - pointer to memin
 // returns pc after execution
 int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 7) {//beq instruction
+	if (current->opcode == 9) {//beq instruction
 	// do in case of equality
 		if (rege[current->rs] == rege[current->rt]) {
 			// jump pc to immediate value
@@ -331,7 +355,7 @@ int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 			moveFP(file, pc);
 		}// otherwise continue to the next row
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -342,14 +366,14 @@ int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 8) {
+	if (current->opcode == 10) {
 		if (rege[current->rs] != rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
 			moveFP(file, pc);
 		}
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -360,14 +384,14 @@ int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 9) { //blt instruction
+	if (current->opcode == 11) { //blt instruction
 		if (rege[current->rs] < rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
 			moveFP(file, pc);
 		}
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -378,14 +402,14 @@ int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 10) { //bgt instruction
+	if (current->opcode == 12) { //bgt instruction
 		if (rege[current->rs] > rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
 			moveFP(file, pc);
 		}
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -396,14 +420,14 @@ int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 11) { //ble instruction
+	if (current->opcode == 13) { //ble instruction
 		if (rege[current->rs] <= rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
 			moveFP(file, pc);
 		}
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -414,14 +438,14 @@ int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 12) { // bge instruction
+	if (current->opcode == 14) { // bge instruction
 		if (rege[current->rs] >= rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
 			moveFP(file, pc);
 		}
 		else
-			pc += 1;
+			pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -433,11 +457,11 @@ int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
 // file - pointer to memin
 // returns pc after execution
 int jal(MemoryLine* current, long pc, int* rege, FILE* file) {
-	if (current->opcode == 13) {	//jal instruction
+	if (current->opcode == 15) {	//jal instruction
 	// put original pc(+1) in return address register
-		rege[15] = pc + 1;
+		rege[current->rd] = update_pc(pc, current); 
 		//  move pc similar to the branch instructions
-		pc = rege[current->rd];
+		pc = rege[current->rs];
 		// move the pointer
 		moveFP(file, pc);
 	}
@@ -456,7 +480,7 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 	// and as a string
 	char* line2, LINES[MAX_LINE];
 	line2 = LINES;
-	if (current->opcode == 14) {	//lw instruction
+	if (current->opcode == 16) {	//lw instruction
 	// address of word
 		int lines = rege[current->rs] + rege[current->rt];
 		// get the hexadecimal word
@@ -468,7 +492,7 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 		// zero lock(again)
 		if (current->rd == 0)
 			rege[current->rd] = 0;
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -482,9 +506,10 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 int sw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 	// and as a string
 	char* line2, LINES[MAX_LINE];
+	char hexval[9];
+
 	line2 = LINES;
-	if (current->opcode == 15) { //sw instruction
-		char hexval[9];
+	if (current->opcode == 17) { //sw instruction
 		// get line index ffor the store
 		int lines = rege[current->rs] + rege[current->rt];
 		// convert rd value to hexacdecimal
@@ -500,7 +525,7 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 		output[lines][6] = hexval[6];
 		output[lines][7] = hexval[7];
 		output[lines][8] = hexval[8];
-		pc += 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -515,7 +540,7 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][9]) {
 // returns pc after execution
 //but gets an array pointer to the hardware registers(ioRege)
 int reti(int opcode, unsigned int* ioRege, long pc) {
-	if (opcode == 16) {
+	if (opcode == 18) {
 		// reti command, very simple
 		pc = ioRege[7];
 		isirqEvent = 0;
@@ -532,11 +557,14 @@ int reti(int opcode, unsigned int* ioRege, long pc) {
 // pc - current pc
 // returns pc after execution
 int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc) {
-	if (current->opcode == 17) {
+	if (current->opcode == 19) {
 		// in command. as specified in instructions
-		rege[current->rd] = ioRege[rege[current->rs] + rege[current->rt]];
+		if (rege[current->rs] + rege[current->rt] == 22)
+			rege[current->rd] = 0;
+		else
+			rege[current->rd] = ioRege[rege[current->rs] + rege[current->rt]];
 		updatehwRegTrace(cycle, 1, rege[current->rs] + rege[current->rt], ioRege, hwregTrace);
-		pc = pc + 1;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -553,8 +581,8 @@ int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle,
 // leds - leds file pointer
 // display - display file pointer
 // returns pc after execution
-int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc, char output[][9], char disk[][9], FILE* leds, FILE* display) {
-	if (current->opcode == 18) {
+int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc, char output[][9], char disk[][9], unsigned int monitor_array[], FILE* leds, FILE* display) {
+	if (current->opcode == 20) {
 		// update ioRege and hwregtrace file like in in
 		ioRege[rege[current->rs] + rege[current->rt]] = rege[current->rd];
 		updatehwRegTrace(cycle, 0, rege[current->rs] + rege[current->rt], ioRege, hwregTrace);
@@ -566,7 +594,9 @@ int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle
 		if ((rege[current->rs] + rege[current->rt] == 14)) {
 			diskOperation(ioRege, output, disk);
 		}
-		pc = pc + 1;
+		if ((rege[current->rs] + rege[current->rt] == 22) && rege[current->rd] == 1)
+			monitor_array[ioRege[20]] = ioRege[21]&0xff;
+		pc = update_pc(pc, current);
 	}
 	return pc;
 }
@@ -581,13 +611,15 @@ int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle
 // cycle - current clock cycle
 // leds and display - file pointers to them
 // disk - disk content array
-int Opcode_Operation(MemoryLine* current, int* rege, unsigned int* ioRege, long pc, FILE* file, char output[][9], FILE* hwregTrace, unsigned int cycle, FILE* leds, FILE* display, char disk[][9]) {
+int Opcode_Operation(MemoryLine* current, int* rege, unsigned int* ioRege, long pc, FILE* file, char output[][9], FILE* hwregTrace, unsigned int cycle, unsigned int monitor_array [], FILE* leds, FILE* display, char disk[][9]) {
 	// while MEM is used to convert hexadecimal string to integer in load
 	// actually. only one of those functions will execute because an if will take it out
 	pc = add(current, pc, rege);
 	pc = sub(current, pc, rege);
+	pc = mul(current, pc, rege);
 	pc = and (current, pc, rege);
 	pc = or (current, pc, rege);
+	pc = xor (current, pc, rege);
 	pc = sll(current, pc, rege);
 	pc = sra(current, pc, rege);
 	pc = srl(current, pc, rege);
@@ -602,7 +634,7 @@ int Opcode_Operation(MemoryLine* current, int* rege, unsigned int* ioRege, long 
 	pc = sw(current, pc, rege, output);
 	pc = reti(current->opcode, ioRege, pc);
 	pc = in(current, rege, ioRege, cycle, hwregTrace, pc);
-	pc = out(current, rege, ioRege, cycle, hwregTrace, pc, output, disk, leds, display);
+	pc = out(current, rege, ioRege, cycle, hwregTrace, pc, output, disk, monitor_array, leds, display);
 
 	// prevent changing zero
 	if (current->rd == 0)
@@ -631,7 +663,7 @@ void updateDiskTimer(unsigned int* ioRege) {
 }
 
 // prints all file outputs. gets pointers to all output files. the memout content as an array. the clock cycle count, the register values at the end and the diskout content as an array
-Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char output[][9], unsigned int count, int Reg_Array[], char disk[][9], FILE* diskout) {
+Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char output[][9], unsigned int count, int Reg_Array[], unsigned int monitor_array[], char disk[][9], FILE* diskout, FILE* monitor, FILE* monitor_yuv) {
 	// i is where the memory file ends. starts at 65532(very big and moves to end of file
 	// and j is the index of the current row
 	int i = MAX_FILE - 2, j = 0;
@@ -665,6 +697,13 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 		fputs(regoutchar, regout);
 		putc('\n', regout);
 	}
+
+	for (i=0; i<NUM_PIXELS*NUM_PIXELS; i++)
+		fprintf(monitor, "02X\n", monitor_array[i]);
+
+	for (i=0; i<NUM_PIXELS*NUM_PIXELS; i++)
+		fprintf(monitor_yuv, "%c", monitor_array[i]&0xff);
+
 }
 // single char to int converter for register indexes
 int StrTol(char c) {
@@ -749,7 +788,7 @@ char* memRead(char output[65536][9], FILE* memin) {
 // out - pointer to file that is being opened
 // name - file name
 // type - r for read w for write
-FILE* openFile(char* name[], char *type) {
+FILE* openFile(char* name, char *type) {
 	FILE* out = fopen(name, type);
 	// if file didn't open leave
 	if (out == NULL) {
@@ -759,7 +798,7 @@ FILE* openFile(char* name[], char *type) {
 }
 
 // gets all files and irq2in array and memory line struct "current" and closes/frees them
-void closeAndFree(FILE* memin, FILE* mem_out, FILE* regout, FILE* trace, FILE* hwregtrace, FILE* cycles, FILE* leds, FILE* display, FILE* diskin, FILE* irq2in, FILE* diskout, int* irq2Times, MemoryLine* current) {
+void closeAndFree(FILE* memin, FILE* mem_out, FILE* regout, FILE* trace, FILE* hwregtrace, FILE* cycles, FILE* leds, FILE* display, FILE* diskin, FILE* irq2in, FILE* diskout, int* irq2Times, MemoryLine* current, FILE* monitor, FILE* monitor_yuv) {
 	// close the files
 	fclose(memin);
 	fclose(diskin);
@@ -772,6 +811,8 @@ void closeAndFree(FILE* memin, FILE* mem_out, FILE* regout, FILE* trace, FILE* h
 	fclose(leds);
 	fclose(display);
 	fclose(diskout);
+	fclose(monitor);
+	fclose(monitor_yuv);
 	// destroy the irqtimes array since it was malloced
 	free(irq2Times);
 	// same with memory line struct
@@ -781,7 +822,7 @@ void closeAndFree(FILE* memin, FILE* mem_out, FILE* regout, FILE* trace, FILE* h
 // copies to memory line "out" from a line in memin.txt
 MemoryLine* Create(FILE *memin, MemoryLine *out) {
 	// two strings for opcode and immediate
-	char opcode[3], immediate_char[4];
+	char opcode[3], immediate_char[MAX_LINE];
 	// get the current memory line
 	fgets(out->line, MAX_LINE, memin);
 	// get the two char opcode
@@ -794,13 +835,18 @@ MemoryLine* Create(FILE *memin, MemoryLine *out) {
 	out->rs = (int)StrTol(out->line[3]);
 	out->rt = (int)StrTol(out->line[4]);
 	// copy immediate value to string
-	strncpy(immediate_char, out->line + 5, 3);
-	// null terminate
-	immediate_char[3] = '\0';
-	// sign extend immediate properly - using arithmetic shifts
-	out->imm = (int)strtol(immediate_char, NULL, 16);
-	out->imm = out->imm << 20;
-	out->imm = out->imm >> 20;
+	out->imm = 0;
+	if ((out->rd==IMM_REG)||(out->rs==IMM_REG)||(out->rt==IMM_REG))
+	{
+		fgets(immediate_char, MAX_LINE, memin);
+			// null terminate
+		immediate_char[5] = '\0';
+		// sign extend immediate properly - using arithmetic shifts
+		out->imm = (int)strtol(immediate_char, NULL, 16);
+		out->imm = out->imm << 18;
+		out->imm = out->imm >> 18;
+	}
+	return out;
 }
 
 // updates the clock cycle count and the clks IO register
@@ -815,11 +861,14 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 // the main function
 // argc - number of command arguments(always 12)
 // argv - command arguments(names of all the files)
-int main(int argc, char* argv[]) {
+int main(int argc) { //, char* argv[]
+	char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout.txt", "regout.txt", "trace.txt", "hwregtrace.txt", "cycles.txt", "leds.txt", "display7seg.txt", "diskout.txt", "monitor.txt", "monitor.yuv"};
 	int Reg_Array[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // Reg_Array - array for regular registers
 	int* rege = Reg_Array, pc = 0; // Rege - pointer to register array, pc - current pc, count - current clock cycle, ioRege - pointer to HW register array
 	unsigned int count = 0, IOReg_Array[18] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, *ioRege = IOReg_Array; // count - clock cycle count, IOReg_array - array for Hardware registers, ioRege - pointer to it
-	FILE* memin, * mem_out, * regout, * trace, * hwregtrace, * cycles, * leds, * display, * diskin, * irq2in, * diskout; // pointers to all the files the simulator is working with
+	FILE* memin, * mem_out, * regout, * trace, * hwregtrace, * cycles, * leds, * display, * diskin, * irq2in, * diskout, *monitor, *monitor_yuv; // pointers to all the files the simulator is working with
+	unsigned int monitor_array [NUM_PIXELS*NUM_PIXELS] = {0};
+
 	irq2in = openFile(argv[3], "r"); // open irq2
 	int* irq2Times = parseirq2(irq2in);
 	char output[65536][9], (*out)[9]; // output is an array of all lines for the memout. and out is a pointer to it
@@ -839,9 +888,9 @@ int main(int argc, char* argv[]) {
 		pc = checkirq(ioRege, pc, memin); // move pc in case of an irq event
 		current = Create(memin, current); // copy line to struct
 		Reg_Array[1] = current->imm; // copy immediate to register
-		Print_To_Trace(trace, pc, current->line, Reg_Array);//print to trace
-		if (current->opcode != 19) { // check if not on a halt
-			pc = Opcode_Operation(current, rege, ioRege, pc, memin, out, hwregtrace, count, leds, display, disk); // perform opcode operation then go to correct row.
+		Print_To_Trace(trace, pc, current->line, Reg_Array); //print to trace
+		if (current->opcode != HALT_COMMAND) { // check if not on a halt
+			pc = Opcode_Operation(current, rege, ioRege, pc, memin, out, hwregtrace, count, monitor_array, leds, display, disk); // perform opcode operation then go to correct row.
 			moveFP(memin, pc); // move file pointer to correct row
 			count = updateclks(count, ioRege); //update clock cycles
 			updateTimer(ioRege); // update the timer
@@ -856,6 +905,8 @@ int main(int argc, char* argv[]) {
 	regout = openFile(argv[5], "w");
 	cycles = openFile(argv[8], "w");
 	diskout = openFile(argv[11], "w");
-	Print_To_Files(mem_out, regout, trace, cycles, output, count, Reg_Array, disk, diskout); //print to files not written during run
-	closeAndFree(memin, mem_out, regout, trace, hwregtrace, cycles, leds, display, diskin, irq2in, diskout, irq2Times, current); // close all files
+	monitor = openFile(argv[12], "w");
+	monitor_yuv = openFile(argv[13], "wb");
+	Print_To_Files(mem_out, regout, trace, cycles, output, count, Reg_Array, monitor_array, disk, diskout, monitor, monitor_yuv); //print to files not written during run
+	closeAndFree(memin, mem_out, regout, trace, hwregtrace, cycles, leds, display, diskin, irq2in, diskout, irq2Times, current, monitor, monitor_yuv); // close all files
 }
