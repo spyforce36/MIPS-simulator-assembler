@@ -200,6 +200,38 @@ void destroy_mem(Memory* mem) {
 }
 
 // part 2 - the iterations over the files
+size_t is_in_char_list( char* char_list, size_t num_chars, char check )
+{
+    size_t ind;
+    for (ind = 0; ind < num_chars; ind ++)
+    {
+        if (char_list[ind] == check)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+char* remove_chars(char str[], size_t str_length, char* chars_to_remove, size_t num_remove_chars)
+{
+    char line[MAX_ROW_LENGTH] = {'\0'};
+    size_t ind = 0, ind_new_line = 0;
+    size_t is_remove_char = 0; 
+
+    for (ind = 0; ind < str_length; ind ++)
+    {
+       if (is_in_char_list( chars_to_remove, num_remove_chars, str[ind] ) == 0)
+       {
+            line[ind_new_line] = str[ind];
+            ind_new_line++ ;
+       } 
+
+    }
+	memcpy_s(str, str_length, line, ind );
+    return str;
+}
+
 
 // the code of the first iteration. goes trough the file row by row and looks for labels, then adds them to the label list
 label* createLabelList(FILE *asembl) {
@@ -215,11 +247,13 @@ label* createLabelList(FILE *asembl) {
     // go all the way trough the file
     while (!feof(asembl)) {
         fgets(line, MAX_LINE, asembl);  // read a command from the assembler file
+        if (strstr(line, ".word") != NULL) continue;  //If line is .word, continue
+		remove_chars(line, strlen(line), "\t ", 2);
+
         only_label_line = 0;  // reset only_label_line
         if (strcmp(line, "\n") == 0) continue;  //If line is blank, continue
         tav1 = line[0];
         if (tav1 == '#') continue;  //If line is Remark, continue
-        if (strstr(line, ".word") != NULL) continue;  //If line is .word, continue
         if (strstr(line, dots) != NULL)  //If dots are found, this is a label
         {
             if (strstr(line, "#") != NULL) // however, ":" can be in a remark. so check for that as well, if so go to another line
@@ -398,18 +432,29 @@ Memory* SecondRun(FILE* file) {
     int k = 0, i = 0, pos1 = 0;
 	// char - line will house the current line. tav1 will save the first character of the line and option, rd, rs, rt and are the command's values
 	// dots - used to detect labels. because something might be past them
+	char *comment_char;
 	char line[MAX_LINE], tav1, * dots = ":";
     MemoryLine* head = NULL;  // the Memory list's head. it will contain info about each memory line in the end
     while ((fgets(line, MAX_LINE, file)) != NULL) { // the loop reads the file line by line. and upon reaching null it stops as that's where the file ends
+		char wo[6] = ".word"; // a string for comparison
+		int isword = 0; // booleand for .world detection
 		printf("line in second run: %s \n", line);
+		if ((comment_char = strchr(line, '#'))!=NULL)
+		{
+			*comment_char = '\n';
+			*(comment_char+1) = '\0';
+		}	
+		if (strstr(line, wo) != NULL) { // in case of the special .word order
+			isword = 1;
+		}
+		else
+			remove_chars(line, strlen(line), "\t ", 2);
+
         if (strcmp(line, "\n") == 0) continue;  // in case of a Blank line, go
         tav1 = line[0];          // get first line
         if (tav1 == '#') continue;  // in case of a Remark line, go
-		char wo[6] = ".word"; // a string for comparison
-		int isword = 0; // booleand for .world detection
-		if (strstr(line, wo) != NULL) { // in case of the special .word order
+		if (isword) { // in case of the special .word order
 			head = specialword(head, line, &pos1, &k);
-			isword = 1;
 		}
 		else if (strstr(line, dots) != NULL){     //in case of regular order and label
 			if (strstr(line, "#") != NULL){       //now we check if the dots is remark and not a label
@@ -634,7 +679,9 @@ void LableChange(MemoryLine* head, label* lb)
 // part 3 - the main function
 
 // the main takes two arguments, the input file and the output file. indexes start with 1 because argv[0] is the program itself
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) { // c:\Users\yair\Documents\project_c\tests\binom\binom.asm// ){//
+	//char *argv[] = {"asm.exe", "binom.asm", "memin.txt"};
+
     // open the input file. doing so in the main function will allow us to have infinite length file names
     // why i call it "asembl"? because of what it is
     FILE *asembl = fopen(argv[1], "r");

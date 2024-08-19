@@ -231,6 +231,7 @@ int add(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 0) { //ADD instruction
 		rege[current->rd] = rege[current->rs] + rege[current->rt];
 		pc = update_pc(pc, current);
+		printf("add %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -244,6 +245,7 @@ int sub(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 1) { //SUB instruction
 		rege[current->rd] = rege[current->rs] - rege[current->rt];
 		pc = update_pc(pc, current);
+		printf("sub %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -251,6 +253,7 @@ int mul (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 2) {//and instruction
 		rege[current->rd] = (rege[current->rs] * rege[current->rt]);
 		pc = update_pc(pc, current);
+		printf("mul %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -264,6 +267,7 @@ int and (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 3) {//and instruction
 		rege[current->rd] = (rege[current->rs] & rege[current->rt]);
 		pc = update_pc(pc, current);
+		printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -277,6 +281,7 @@ int or (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 4) { //or instruction
 		rege[current->rd] = (rege[current->rs] | rege[current->rt]);
 		pc = update_pc(pc, current);
+		printf("or %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -284,6 +289,7 @@ int xor (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 5) { //or instruction
 		rege[current->rd] = (rege[current->rs] ^ rege[current->rt]);
 		pc = update_pc(pc, current);
+		printf("xor %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -297,6 +303,7 @@ int sll(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 6) { //sll instruction
 		rege[current->rd] = (rege[current->rs] << rege[current->rt]);
 		pc = update_pc(pc, current);
+		printf("sll %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -332,6 +339,7 @@ int srl(MemoryLine* current, long pc, int* rege) {
 		if (current->rd == 0)
 			rege[current->rd] = 0;
 		pc = update_pc(pc, current);
+		printf("srl %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -348,6 +356,8 @@ int srl(MemoryLine* current, long pc, int* rege) {
 int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 9) {//beq instruction
 	// do in case of equality
+		printf("beq %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		if (rege[current->rs] == rege[current->rt]) {
 			// jump pc to immediate value
 			pc = rege[current->rd];
@@ -367,6 +377,8 @@ int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 10) {
+		printf("bne %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		if (rege[current->rs] != rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -385,6 +397,7 @@ int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 11) { //blt instruction
+		printf("blt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		if (rege[current->rs] < rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -403,6 +416,7 @@ int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 12) { //bgt instruction
+		printf("bgt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		if (rege[current->rs] > rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -421,6 +435,8 @@ int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 13) { //ble instruction
+		printf("ble %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		if (rege[current->rs] <= rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -439,6 +455,8 @@ int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 14) { // bge instruction
+		printf("bge %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		if (rege[current->rs] >= rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -458,6 +476,7 @@ int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int jal(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 15) {	//jal instruction
+		printf("jal %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	// put original pc(+1) in return address register
 		rege[current->rd] = update_pc(pc, current); 
 		//  move pc similar to the branch instructions
@@ -482,6 +501,8 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 	line2 = LINES;
 	if (current->opcode == 16) {	//lw instruction
 	// address of word
+		printf("lw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		int lines = rege[current->rs] + rege[current->rt];
 		// get the hexadecimal word
 		strcpy(line2, output[lines]);
@@ -511,6 +532,8 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 	line2 = LINES;
 	if (current->opcode == 17) { //sw instruction
 		// get line index ffor the store
+		printf("sw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		int lines = rege[current->rs] + rege[current->rt];
 		// convert rd value to hexacdecimal
 		sprintf(hexval, "%05X", rege[current->rd]);
@@ -537,6 +560,8 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 //but gets an array pointer to the hardware registers(ioRege)
 int reti(int opcode, unsigned int* ioRege, long pc) {
 	if (opcode == 18) {
+		//printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		// reti command, very simple
 		pc = ioRege[7];
 		isirqEvent = 0;
@@ -554,6 +579,7 @@ int reti(int opcode, unsigned int* ioRege, long pc) {
 // returns pc after execution
 int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc) {
 	if (current->opcode == 19) {
+		printf("in %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		// in command. as specified in instructions
 		if (rege[current->rs] + rege[current->rt] == 22)
 			rege[current->rd] = 0;
@@ -579,6 +605,8 @@ int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle,
 // returns pc after execution
 int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc, char output[][MAX_LINE], char disk[][MAX_LINE], unsigned int monitor_array[], FILE* leds, FILE* display) {
 	if (current->opcode == 20) {
+		printf("out %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+
 		// update ioRege and hwregtrace file like in in
 		ioRege[rege[current->rs] + rege[current->rt]] = rege[current->rd];
 		updatehwRegTrace(cycle, 0, rege[current->rs] + rege[current->rt], ioRege, hwregTrace);
