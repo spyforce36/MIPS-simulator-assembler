@@ -680,7 +680,7 @@ void LableChange(MemoryLine* head, label* lb)
 
 // the main takes two arguments, the input file and the output file. indexes start with 1 because argv[0] is the program itself
 int main(int argc, char *argv[]) { // c:\Users\yair\Documents\project_c\tests\binom\binom.asm// ){//
-	//char *argv[] = {"asm.exe", "binom.asm", "memin.txt"};
+	//char *argv[] = {"asm.exe", "triangle.asm", "memin.txt"};
 
     // open the input file. doing so in the main function will allow us to have infinite length file names
     // why i call it "asembl"? because of what it is

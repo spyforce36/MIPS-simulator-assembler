@@ -11,6 +11,7 @@
 #define HALT_COMMAND 21
 #define IMM_REG 1
 #define NUM_PIXELS 256
+#define NUM_IO_REGISTERS 23
 // 65536 is long enough for most of the simulator's input memories.
 // we didn't make it support infinite code because we didn't have tile to implement it
 #define MAX_FILE 5000
@@ -128,23 +129,23 @@ void updateLD(unsigned int cycle, int regNum, unsigned int* ioRege, FILE* leds, 
 }
 
 // updates the hwRegTrace file
-// gets current cycle, action(0 write 1 read), register being used and HW register array pointer, as well as a pointer to the file
-void updatehwRegTrace(unsigned int cycle, int action, int reg, unsigned int* ioRege, FILE* hwregTrace) {
+// gets current cycle, is_read(0 write 1 read), register being used and HW register array pointer, as well as a pointer to the file
+void updatehwRegTrace(unsigned int cycle, int is_read, int reg, unsigned int* ioRege, FILE* hwregTrace) {
 	// big string for current line, slowly strings will be added to it then it will be printed
 	// to the file after the null wrap
 	char toWrite[2000] = "";
+	char *names[] = { " irq0enable "," irq1enable "," irq2enable "," irq0status "," irq1status "," irq2status "," irqhandler "," irqreturn "," clks "," leds ",
+		" display7seg "," timerenable "," timercurrent "," timermax "," diskcmd "," disksector "," diskbuffer "," diskstatus "," reserved "," reserved ", " monitoraddr ", " monitordata ", " monitorcmd "  };
 	// start with cycle
 	_ultoa(cycle, toWrite, 10);
 	// 1 - read, 0 - write
-	if (action == 1) {
+	if (is_read == 1) {
 		strcat(toWrite, " READ");
 	}
 	else {
 		strcat(toWrite, " WRITE");
 	}
 	// the names of the IO registers
-	char names[18][50] = { " irq0enable "," irq1enable "," irq2enable "," irq0status "," irq1status "," irq2status "," irqhandler "," irqreturn "," clks "," leds ",
-		" display7seg "," timerEnable "," timerCurrent "," timerMax "," diskcmd "," disksector "," diskbuffer "," diskstatus "," reserved ", " monitoraddr ", " monitordata ", " monitorcmd " };
 	// write the register's name
 	strcat(toWrite, names[reg]);
 	// now convert the register value. the bitmask is an extention to 8 bits
@@ -231,7 +232,7 @@ int add(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 0) { //ADD instruction
 		rege[current->rd] = rege[current->rs] + rege[current->rt];
 		pc = update_pc(pc, current);
-		printf("add %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("add %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -245,7 +246,7 @@ int sub(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 1) { //SUB instruction
 		rege[current->rd] = rege[current->rs] - rege[current->rt];
 		pc = update_pc(pc, current);
-		printf("sub %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("sub %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -253,7 +254,7 @@ int mul (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 2) {//and instruction
 		rege[current->rd] = (rege[current->rs] * rege[current->rt]);
 		pc = update_pc(pc, current);
-		printf("mul %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("mul %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -267,7 +268,7 @@ int and (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 3) {//and instruction
 		rege[current->rd] = (rege[current->rs] & rege[current->rt]);
 		pc = update_pc(pc, current);
-		printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -281,7 +282,7 @@ int or (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 4) { //or instruction
 		rege[current->rd] = (rege[current->rs] | rege[current->rt]);
 		pc = update_pc(pc, current);
-		printf("or %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("or %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -289,7 +290,7 @@ int xor (MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 5) { //or instruction
 		rege[current->rd] = (rege[current->rs] ^ rege[current->rt]);
 		pc = update_pc(pc, current);
-		printf("xor %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("xor %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -303,7 +304,7 @@ int sll(MemoryLine* current, long pc, int* rege) {
 	if (current->opcode == 6) { //sll instruction
 		rege[current->rd] = (rege[current->rs] << rege[current->rt]);
 		pc = update_pc(pc, current);
-		printf("sll %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("sll %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -339,7 +340,7 @@ int srl(MemoryLine* current, long pc, int* rege) {
 		if (current->rd == 0)
 			rege[current->rd] = 0;
 		pc = update_pc(pc, current);
-		printf("srl %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("srl %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	}
 	return pc;
 }
@@ -356,7 +357,7 @@ int srl(MemoryLine* current, long pc, int* rege) {
 int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 9) {//beq instruction
 	// do in case of equality
-		printf("beq %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("beq %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		if (rege[current->rs] == rege[current->rt]) {
 			// jump pc to immediate value
@@ -377,7 +378,7 @@ int beq(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 10) {
-		printf("bne %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("bne %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		if (rege[current->rs] != rege[current->rt]) {
 			pc = rege[current->rd];
@@ -397,7 +398,7 @@ int bne(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 11) { //blt instruction
-		printf("blt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("blt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		if (rege[current->rs] < rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -416,7 +417,7 @@ int blt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 12) { //bgt instruction
-		printf("bgt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("bgt %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		if (rege[current->rs] > rege[current->rt]) {
 			pc = rege[current->rd];
 			// move the pointer
@@ -435,7 +436,7 @@ int bgt(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 13) { //ble instruction
-		printf("ble %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("ble %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		if (rege[current->rs] <= rege[current->rt]) {
 			pc = rege[current->rd];
@@ -455,7 +456,7 @@ int ble(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 14) { // bge instruction
-		printf("bge %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("bge %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		if (rege[current->rs] >= rege[current->rt]) {
 			pc = rege[current->rd];
@@ -476,7 +477,7 @@ int bge(MemoryLine* current, long pc, int* rege, FILE* file) {
 // returns pc after execution
 int jal(MemoryLine* current, long pc, int* rege, FILE* file) {
 	if (current->opcode == 15) {	//jal instruction
-		printf("jal %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("jal %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 	// put original pc(+1) in return address register
 		rege[current->rd] = update_pc(pc, current); 
 		//  move pc similar to the branch instructions
@@ -501,7 +502,7 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 	line2 = LINES;
 	if (current->opcode == 16) {	//lw instruction
 	// address of word
-		printf("lw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("lw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		int lines = rege[current->rs] + rege[current->rt];
 		// get the hexadecimal word
@@ -532,7 +533,7 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 	line2 = LINES;
 	if (current->opcode == 17) { //sw instruction
 		// get line index ffor the store
-		printf("sw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("sw %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		int lines = rege[current->rs] + rege[current->rt];
 		// convert rd value to hexacdecimal
@@ -560,7 +561,7 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 //but gets an array pointer to the hardware registers(ioRege)
 int reti(int opcode, unsigned int* ioRege, long pc) {
 	if (opcode == 18) {
-		//printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		//////printf("and %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		// reti command, very simple
 		pc = ioRege[7];
@@ -579,7 +580,7 @@ int reti(int opcode, unsigned int* ioRege, long pc) {
 // returns pc after execution
 int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc) {
 	if (current->opcode == 19) {
-		printf("in %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("in %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 		// in command. as specified in instructions
 		if (rege[current->rs] + rege[current->rt] == 22)
 			rege[current->rd] = 0;
@@ -604,12 +605,15 @@ int in(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle,
 // display - display file pointer
 // returns pc after execution
 int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle, FILE* hwregTrace, long pc, char output[][MAX_LINE], char disk[][MAX_LINE], unsigned int monitor_array[], FILE* leds, FILE* display) {
+
 	if (current->opcode == 20) {
-		printf("out %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
+		////printf("out %d, %d, %d, %d\n", current->rd, current->rs, current->rt, current->imm);
 
 		// update ioRege and hwregtrace file like in in
 		ioRege[rege[current->rs] + rege[current->rt]] = rege[current->rd];
 		updatehwRegTrace(cycle, 0, rege[current->rs] + rege[current->rt], ioRege, hwregTrace);
+		//syntax - updatehwRegTrace(unsigned int cycle, int is_read, int reg, unsigned int* ioRege, FILE* hwregTrace)
+		
 		// update leds and display files
 		if ((rege[current->rs] + rege[current->rt] == 9) || (rege[current->rs] + rege[current->rt] == 10)) {
 			updateLD(cycle, rege[current->rs] + rege[current->rt], ioRege, leds, display);
@@ -619,7 +623,10 @@ int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle
 			diskOperation(ioRege, output, disk);
 		}
 		if ((rege[current->rs] + rege[current->rt] == 22) && rege[current->rd] == 1)
+		{
 			monitor_array[ioRege[20]] = ioRege[21]&0xff;
+			printf("(%d, %d)\n", ioRege[20]/256, ioRege[20]%256);
+		}
 		pc = update_pc(pc, current);
 	}
 	return pc;
@@ -711,6 +718,7 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 	while (strcmp(disk[i], "00000") == 0)
 		i -= 1;
 	while (j <= i) {
+		disk[j][5] = '\0';
 		fputs(disk[j], diskout);
 		putc('\n', diskout);
 		j += 1;
@@ -890,9 +898,9 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 // argv - command arguments(names of all the files)
 int main(int argc) { //, char* argv[]
 	char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout.txt", "regout.txt", "trace.txt", "hwregtrace.txt", "cycles.txt", "leds.txt", "display7seg.txt", "diskout.txt", "monitor.txt", "monitor.yuv"};
-	int Reg_Array[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // Reg_Array - array for regular registers
+	int Reg_Array[16] = { 0 }; // Reg_Array - array for regular registers
 	int* rege = Reg_Array, pc = 0; // Rege - pointer to register array, pc - current pc, count - current clock cycle, ioRege - pointer to HW register array
-	unsigned int count = 0, IOReg_Array[18] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, *ioRege = IOReg_Array; // count - clock cycle count, IOReg_array - array for Hardware registers, ioRege - pointer to it
+	unsigned int count = 0, IOReg_Array[NUM_IO_REGISTERS] = { 0 }, *ioRege = IOReg_Array; // count - clock cycle count, IOReg_array - array for Hardware registers, ioRege - pointer to it
 	FILE* memin, * mem_out, * regout, * trace, * hwregtrace, * cycles, * leds, * display, * diskin, * irq2in, * diskout, *monitor, *monitor_yuv; // pointers to all the files the simulator is working with
 	unsigned int monitor_array [NUM_PIXELS*NUM_PIXELS] = {0};
 
