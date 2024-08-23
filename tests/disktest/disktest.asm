@@ -34,8 +34,8 @@ L2:
 read_sector:
     out $s0, $zero, $imm, 16 # set $s0 as memory of buffer
 	
-	add $t2, $zero, $imm, 1 #set $t2 as command for disk(read)
-    out $t2, $zero, $imm, 14 #read to disk buffer
+	add $t0, $zero, $imm, 1 #set $t2 as command for disk(read)
+    out $t0, $zero, $imm, 14 #read to disk buffer
 
 # for k=0;k<128;k++	
 #	output[k] += input[k];
