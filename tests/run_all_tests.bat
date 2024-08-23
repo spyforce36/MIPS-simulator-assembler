@@ -1,6 +1,13 @@
 cls
 
 cd C:\Users\yair\Documents\project_c\tests\sort
-.\run.bat
+call .\run.bat
+
 cd C:\Users\yair\Documents\project_c\tests\binom
-.\run.bat
+call .\run.bat
+
+cd C:\Users\yair\Documents\project_c\tests\triangle
+call .\run.bat
+
+cd C:\Users\yair\Documents\project_c\tests\disktest
+call .\run.bat

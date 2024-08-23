@@ -438,7 +438,7 @@ Memory* SecondRun(FILE* file) {
     while ((fgets(line, MAX_LINE, file)) != NULL) { // the loop reads the file line by line. and upon reaching null it stops as that's where the file ends
 		char wo[6] = ".word"; // a string for comparison
 		int isword = 0; // booleand for .world detection
-		printf("line in second run: %s \n", line);
+		//printf("line in second run: %s \n", line);
 		if ((comment_char = strchr(line, '#'))!=NULL)
 		{
 			*comment_char = '\n';
