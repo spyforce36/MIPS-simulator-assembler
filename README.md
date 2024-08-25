@@ -100,7 +100,6 @@ The processor supports input/output through in and out instructions that access 
 |13|timermax|32|max timer value|
 |14|diskcmd|2|<p>0 = no command</p><p>1 = read sector</p><p>2 = write sector</p>|
 |15|disksector|7|sector number, starting from 0.|
-
 |16|diskbuffer|12|<p>Memory address of a buffer containing the sector being read or written. Each sector will be</p><p>read/written using DMA in 128 words.</p>|
 | :- | :- | :- | :- |
 |17|diskstatus|1|<p>0 = free to receive new command</p><p>1 = busy handling a read/write commad</p>|
@@ -294,11 +293,11 @@ The following assumptions can be made:
 
       if (k == 0 || n == k)
 
-return 1;
+         return 1;
 
-return binom(n-1, k-1) + binom(n-1, k)
+      return binom(n-1, k-1) + binom(n-1, k)
 
-}
+      }
 
 1. The triangle.asm program, which draws a right-angled triangle filled with white color on the screen (all the pixels in the perimeter and inside the area of ​​the triangle are white).
    1. A is the upper left vertex
@@ -308,11 +307,11 @@ return binom(n-1, k-1) + binom(n-1, k)
    1. Edge BC is horizontal
    1. The addresses of the vertices of the triangle relative to the beginning of the buffer frame are given at the addresses 0x100 (A), 0x101 (B), 0x102 (C)
 
-![קובץ:Right triangle2.jpg](Aspose.Words.fde8aba2-82c1-4c3e-a868-06012ad1f03e.002.jpeg)
+   ![קובץ:Right triangle2.jpg](Aspose.Words.fde8aba2-82c1-4c3e-a868-06012ad1f03e.002.jpeg)
 
 1. The disktest.asm program, which performs a sum of the contents of sectors 0 to 7 on the hard disk and writes the summation result to sector 8, meaning every word in sector 8 will be the sum of the 8 corresponding words from sectors 0 to 7:
 
-for (i = 0; i < 128; i++)
+   for (i = 0; i < 128; i++)
 
-sector8[i] = sector0[i] + sector1[i] + … + sector7[i]
+      sector8[i] = sector0[i] + sector1[i] + … + sector7[i]
 
