@@ -17,6 +17,8 @@
 #define MAX_FILE 5000
 // disk timer max - 1024 "disk is busy" clock cycles
 #define diskTimerMax = 1024;
+#define SIGNEX(v, sb) ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
+#define SIGNBIT_LOC 19
 
 // global boolean to determine if in irq event
 int isirqEvent = 0;
@@ -79,7 +81,7 @@ Print_To_Trace(FILE* trace, int pc, char* line, int Reg_Array[]) {
 	// hexval - hexadcimal value of current row
 	char hexval[MAX_LINE], instruction[MAX_LINE], * inst = instruction;
 	// write hexadecimal PC
-	sprintf(hexval, "%03X", pc);
+	sprintf(hexval, "%03X", pc&0xfff);
 	// write hexadecimal pc in trace
 	fputs(hexval, trace);
 	// write a space to the file
@@ -92,7 +94,7 @@ Print_To_Trace(FILE* trace, int pc, char* line, int Reg_Array[]) {
 	putc(' ', trace);
 	// now write each register's value into the trace file
 	for (int i = 0; i <= 15; i++) {
-		sprintf(hexval, "%08x", Reg_Array[i]);
+		sprintf(hexval, "%08x", Reg_Array[i]&0xffffffff);
 		fputs(hexval, trace);
 		if (i != 15) {
 			putc(' ', trace);
@@ -109,7 +111,7 @@ void updateLD(unsigned int cycle, int regNum, unsigned int* ioRege, FILE* leds, 
 	_ultoa(cycle, toWrite, 10);
 	// cibvert register value to hexa
 	char regVal[MAX_LINE];
-	sprintf(regVal, "%08x", ioRege[regNum]);
+	sprintf(regVal, "%08x", ioRege[regNum]&0xffffffff);
 	// add the spacebar
 	strcat(toWrite, " ");
 	strcat(toWrite, regVal);
@@ -151,7 +153,7 @@ void updatehwRegTrace(unsigned int cycle, int is_read, int reg, unsigned int* io
 	// now convert the register value. the bitmask is an extention to 8 bits
 	// string will hold register value as string
 	char regVal[MAX_LINE];
-	sprintf(regVal, "%08x", ioRege[reg]);
+	sprintf(regVal, "%08x", ioRege[reg]&0xffffffff);
 	strcat(toWrite, regVal);
 	// add next line
 	strcat(toWrite, "\n");
@@ -510,6 +512,7 @@ int lw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 		// convert to an integer
 		MEM = (int)strtol(line2, NULL, 16);
 		// put in register
+		MEM = SIGNEX(MEM, SIGNBIT_LOC);
 		rege[current->rd] = MEM;
 		// zero lock(again)
 		if (current->rd == 0)
@@ -537,7 +540,7 @@ int sw(MemoryLine* current, long pc, int* rege, char output[][MAX_LINE]) {
 
 		int lines = rege[current->rs] + rege[current->rt];
 		// convert rd value to hexacdecimal
-		sprintf(hexval, "%05X", rege[current->rd]);
+		sprintf(hexval, "%05X", rege[current->rd]&0xfffff);
 		// copy each char in the word to a diffrent bit for the output
 		// which will be later written to memout
 		output[lines][0] = hexval[0];
@@ -728,7 +731,7 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 
 	// finally. write the register values to regout. not including zero and imm
 	for (i = 2; i <= 15; i++) {
-		sprintf(regoutchar, "%08X", Reg_Array[i]);
+		sprintf(regoutchar, "%08X", Reg_Array[i]&0xffffffff);
 		fputs(regoutchar, regout);
 		putc('\n', regout);
 	}
@@ -878,8 +881,7 @@ MemoryLine* Create(FILE *memin, MemoryLine *out) {
 		immediate_char[5] = '\0';
 		// sign extend immediate properly - using arithmetic shifts
 		out->imm = (int)strtol(immediate_char, NULL, 16);
-		out->imm = out->imm << 18;
-		out->imm = out->imm >> 18;
+		out->imm = SIGNEX(out->imm, SIGNBIT_LOC);
 	}
 	return out;
 }
@@ -896,7 +898,7 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 // the main function
 // argc - number of command arguments(always 12)
 // argv - command arguments(names of all the files)
-int main(int argc, char* argv[]) { //, char* argv[]
+int main(int argc, char* argv[]) { //
 	//char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout.txt", "regout.txt", "trace.txt", "hwregtrace.txt", "cycles.txt", "leds.txt", "display7seg.txt", "diskout.txt", "monitor.txt", "monitor.yuv"};
 	int Reg_Array[16] = { 0 }; // Reg_Array - array for regular registers
 	int* rege = Reg_Array, pc = 0; // Rege - pointer to register array, pc - current pc, count - current clock cycle, ioRege - pointer to HW register array

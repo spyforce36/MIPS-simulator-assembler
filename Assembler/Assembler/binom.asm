@@ -8,7 +8,7 @@
 
 .word 0x100 5 # n
 .word 0x101 2 # k
-.word 0x102 0 # result
+.word 0x102 -5 # result
 	
 	add $s0,$zero,$imm,0x100	# load address of n to $s
 	lw $a0,$s0,$zero,0			# load n to $a0

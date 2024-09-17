@@ -8,6 +8,15 @@
 #define MAX_NUM_ROWS_MEMORY 4096
 #define ROW_LENGTH_MEMORY 5
 #define MAX_LABEL_LENGTH 50
+#define SIGNEX(v, sb) ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
+#define SIGNBIT_LOC 19
+
+int max(int a, int b)
+{
+	if (a>b)
+		return a;
+	return b;
+}
 
 // first part - utility
 
@@ -56,6 +65,8 @@ int find(label* head, char name[50]) {
     // current - the current label's name
     char current[50];
     // start with the head
+	if (head==NULL)
+		return -1;
     strcpy(current, head->name);
     // strcmp returns 0 if names are equal
     while (strcmp(current, name) != 0) {
@@ -328,6 +339,7 @@ MemoryLine *specialword(MemoryLine* head, char line[MAX_LINE], int *pos1, int *k
 		if (wordP[1] == 'x' || wordP[1] == 'X') pos = strtol(wordP, NULL, 16);
 	}
 	else pos = atoi(wordP); // and the else blocks considers a decimal input
+	pos = SIGNEX(pos, SIGNBIT_LOC);
 	// now. we will save the command in the memory list. NONO will be used as an indicator when writing to turn the command into a .word
 	strcpy(nono, "NONO"); 
 	head = add_line(head, nono, nono, nono, nono, wordN, 0, pos);  // save line to line list. wordN - the immediate value, is used as the data
@@ -429,7 +441,7 @@ MemoryLine *readLine(char *line, int *pos1, int *i, MemoryLine *head, int *k) {
 Memory* SecondRun(FILE* file) {
     // k - the index of the current char being read, i - the current position in the file
 	// pos1 - the last line of the memory file, pos - the address in .word commands, as an int
-    int k = 0, i = 0, pos1 = 0;
+    int k = 0, i = 0, pos1 = 0, last = 0, num_rows = 0;
 	// char - line will house the current line. tav1 will save the first character of the line and option, rd, rs, rt and are the command's values
 	// dots - used to detect labels. because something might be past them
 	char *comment_char;
@@ -480,12 +492,19 @@ Memory* SecondRun(FILE* file) {
 			if (line[k] == '#')	continue;
 			if (line[k] == '\n') continue;
 		}
-		if (!isword) { // copy line in all not .world scenarios
+		if (isword) 
+			last = max(last, pos1);		
+		else{ // copy line in all not .world scenarios
 		mark:
 			head = readLine(line, &pos1, &i, head, &k);
+			if (strstr(line, "$imm") != NULL) // I command
+				num_rows+=2;
+			else
+				num_rows++;
 		}
 	}
-	return create_mem(head, pos1);  // create memory structure and return it to main function
+	last = max(last, num_rows - 1);		
+	return create_mem(head, last);  // create memory structure and return it to main function
 }
 
 //helpful function for printdatatofile - prints rd,rs,rt into the memin file
@@ -613,7 +632,9 @@ void PrintDataToFile(Memory* mem, FILE *memin)
 					num = strtol(currentLine->imm, NULL, 16);
 				else  //Imiddiate is decimal
 					num = atoi(currentLine->imm);	
-				sprintf(memory_code[currentLine->pos], "%05X", num);  //Print immidiate in hex
+				num = SIGNEX(num, SIGNBIT_LOC);
+
+				sprintf(memory_code[currentLine->pos], "%05X", num & 0xFFFFF);  //Print immidiate in hex
 				is_word = 1;
 			}
 		}
@@ -632,6 +653,7 @@ void PrintDataToFile(Memory* mem, FILE *memin)
 			//fprintf(memin, "\n");
 			if ((currentLine->imm[0] == '0') && ((currentLine->imm[1] == 'x') || (currentLine->imm[1] == 'X'))) num = strtol(currentLine->imm, NULL, 16);  //Check if immidiate in hex
 			else num = atoi(currentLine->imm);
+			num = SIGNEX(num, SIGNBIT_LOC);
 			sprintf(memory_code[idx_line_in_memory], "%05X", num & 0xfffff);			
 			//Print immidiate in hex. the & 0xfff is supposed to shorte negative numbers to 3 hexadecimal digits or 12 bits
 		}
@@ -679,8 +701,8 @@ void LableChange(MemoryLine* head, label* lb)
 // part 3 - the main function
 
 // the main takes two arguments, the input file and the output file. indexes start with 1 because argv[0] is the program itself
-int main(int argc, char *argv[]) { // c:\Users\yair\Documents\project_c\tests\binom\binom.asm// ){//
-	//char *argv[] = {"asm.exe", "triangle.asm", "memin.txt"};
+int main(int argc , char *argv[] ) { //{//, char *argv[]
+	//char *argv[] = {"asm.exe", "a.asm", "memin.txt"};
 
     // open the input file. doing so in the main function will allow us to have infinite length file names
     // why i call it "asembl"? because of what it is

@@ -1,6 +1,6 @@
 #array to be sorted
 
-.word 1024 246
+.word 1024 -3
 .word 1025 352
 .word 1026 27
 .word 1027 33
