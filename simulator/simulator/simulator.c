@@ -7,7 +7,9 @@
 #include <ctype.h>
 
 // a line is always smaller than 10 chars
-#define MAX_LINE 9
+#define LINE_LENGTH 5
+#define MAX_LINE 8
+#define MAX_DISK 16390 //128*128+6
 #define HALT_COMMAND 21
 #define IMM_REG 1
 #define NUM_PIXELS 256
@@ -110,7 +112,7 @@ void updateLD(unsigned int cycle, int regNum, unsigned int* ioRege, FILE* leds, 
 	// start with cycle
 	_ultoa(cycle, toWrite, 10);
 	// cibvert register value to hexa
-	char regVal[MAX_LINE];
+	char regVal[10];
 	sprintf(regVal, "%08x", ioRege[regNum]&0xffffffff);
 	// add the spacebar
 	strcat(toWrite, " ");
@@ -697,7 +699,7 @@ void updateDiskTimer(unsigned int* ioRege) {
 }
 
 // prints all file outputs. gets pointers to all output files. the memout content as an array. the clock cycle count, the register values at the end and the diskout content as an array
-Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char output[][MAX_LINE], unsigned int count, int Reg_Array[], unsigned int monitor_array[], char disk[][MAX_LINE], FILE* diskout, FILE* monitor, FILE* monitor_yuv) {
+void Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char output[][MAX_LINE], unsigned int count, int Reg_Array[], unsigned int monitor_array[], char disk[][MAX_LINE], FILE* diskout, FILE* monitor, FILE* monitor_yuv) {
 	// i is where the memory file ends. starts at 65532(very big and moves to end of file
 	// and j is the index of the current row
 	int i = MAX_FILE - 2, j = 0;
@@ -706,10 +708,10 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 	// move memout end pointer to correct place
 	while (strcmp(output[i], "00000") == 0)
 		i -= 1;
-	// write memout. with a \n between two subsequent 8 char rows
+	// write memout. with a \n between two subsequent LINE_LENGTH char rows
 	while (j <= i) {
 		{
-			output[j][5] = '\0';
+			output[j][LINE_LENGTH] = '\0';
 			fputs(output[j], mem_out);
 			putc('\n', mem_out);
 		}
@@ -721,7 +723,7 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 	while (strcmp(disk[i], "00000") == 0)
 		i -= 1;
 	while (j <= i) {
-		disk[j][5] = '\0';
+		disk[j][LINE_LENGTH] = '\0';
 		fputs(disk[j], diskout);
 		putc('\n', diskout);
 		j += 1;
@@ -736,8 +738,13 @@ Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char outp
 		putc('\n', regout);
 	}
 
-	for (i=0; i<NUM_PIXELS*NUM_PIXELS; i++)
-		fprintf(monitor, "%02X\n", monitor_array[i]&0xff);
+	i = NUM_PIXELS*NUM_PIXELS - 1; // reset i and j to write monitor.txt
+	// write disk out same way as memout
+	while (monitor_array[i] == 0)
+		i -= 1;
+
+	for (j=0; j<=i; j++)
+		fprintf(monitor, "%02X\n", monitor_array[j]&0xff);
 
 	for (i=0; i<NUM_PIXELS*NUM_PIXELS; i++)
 		fprintf(monitor_yuv, "%c", monitor_array[i]&0xff);
@@ -797,8 +804,8 @@ void checkirq2(unsigned int* ioRege, unsigned int count, int* irq2Times) {
 }
 // reads memory and disk input files(memin) and puts them in array(output)
 // the array will be written to memout or diskout eventually
-char* memRead(char output[MAX_FILE][MAX_LINE], FILE* memin) {
-	char* out = output;
+char** memRead(char output[][MAX_LINE], FILE* memin) {
+	char** out = output;
 	// a string for the line being read to output
 	char* line, Lines[MAX_LINE];
 	// the current memory line
@@ -807,8 +814,10 @@ char* memRead(char output[MAX_FILE][MAX_LINE], FILE* memin) {
 	while (!feof(memin)) { //place input file lines into array
 		fgets(line, MAX_LINE, memin);
 		// null terminate
-		strcpy(output[i], line);
-		output[i][8] = '\0';
+		strcpy_s(output[i], MAX_LINE, line);
+		output[i][LINE_LENGTH] = '\0';
+		//printf("%s\n", output[i]);
+		
 		i += 1;
 	}
 	i += 1;
@@ -878,7 +887,7 @@ MemoryLine* Create(FILE *memin, MemoryLine *out) {
 	{
 		fgets(immediate_char, MAX_LINE, memin);
 			// null terminate
-		immediate_char[5] = '\0';
+		immediate_char[LINE_LENGTH] = '\0';
 		// sign extend immediate properly - using arithmetic shifts
 		out->imm = (int)strtol(immediate_char, NULL, 16);
 		out->imm = SIGNEX(out->imm, SIGNBIT_LOC);
@@ -898,8 +907,11 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 // the main function
 // argc - number of command arguments(always 12)
 // argv - command arguments(names of all the files)
-int main(int argc, char* argv[]) { //
-	//char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout.txt", "regout.txt", "trace.txt", "hwregtrace.txt", "cycles.txt", "leds.txt", "display7seg.txt", "diskout.txt", "monitor.txt", "monitor.yuv"};
+int main(int argc, char* argv[]) { // , char* argv[]
+	
+	// char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout1.txt", "regout1.txt", "trace1.txt",
+	//  "hwregtrace1.txt", "cycles1.txt", "leds1.txt", "display7seg1.txt", "diskout1.txt", "monitor1.txt", "monitor1.yuv"};
+
 	int Reg_Array[16] = { 0 }; // Reg_Array - array for regular registers
 	int* rege = Reg_Array, pc = 0; // Rege - pointer to register array, pc - current pc, count - current clock cycle, ioRege - pointer to HW register array
 	unsigned int count = 0, IOReg_Array[NUM_IO_REGISTERS] = { 0 }, *ioRege = IOReg_Array; // count - clock cycle count, IOReg_array - array for Hardware registers, ioRege - pointer to it
@@ -909,7 +921,7 @@ int main(int argc, char* argv[]) { //
 	irq2in = openFile(argv[3], "r"); // open irq2
 	int* irq2Times = parseirq2(irq2in);
 	char output[MAX_FILE][MAX_LINE], (*out)[MAX_LINE]; // output is an array of all lines for the memout. and out is a pointer to it
-	char diskArr[MAX_FILE][MAX_LINE], (*disk)[MAX_LINE] = diskArr; // diskArr contains the disk's memory and i read like the input file the pointer is a portable array pointer for it
+	char diskArr[MAX_DISK][MAX_LINE], (*disk)[MAX_LINE] = diskArr; // diskArr contains the disk's memory and i read like the input file the pointer is a portable array pointer for it
 	memin = openFile(argv[1], "r"); //input file opening
 	trace = openFile(argv[6], "w");//trace file opening
 	leds = openFile(argv[9], "w");//leds file opening
