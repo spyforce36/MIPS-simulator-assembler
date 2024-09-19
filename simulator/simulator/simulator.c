@@ -96,7 +96,7 @@ Print_To_Trace(FILE* trace, int pc, char* line, int Reg_Array[]) {
 	putc(' ', trace);
 	// now write each register's value into the trace file
 	for (int i = 0; i <= 15; i++) {
-		sprintf(hexval, "%08x", Reg_Array[i]&0xffffffff);
+		sprintf(hexval, "%08X", Reg_Array[i]&0xffffffff);
 		fputs(hexval, trace);
 		if (i != 15) {
 			putc(' ', trace);
@@ -113,7 +113,7 @@ void updateLD(unsigned int cycle, int regNum, unsigned int* ioRege, FILE* leds, 
 	_ultoa(cycle, toWrite, 10);
 	// cibvert register value to hexa
 	char regVal[10];
-	sprintf(regVal, "%08x", ioRege[regNum]&0xffffffff);
+	sprintf(regVal, "%08X", ioRege[regNum]&0xffffffff);
 	// add the spacebar
 	strcat(toWrite, " ");
 	strcat(toWrite, regVal);
@@ -155,7 +155,7 @@ void updatehwRegTrace(unsigned int cycle, int is_read, int reg, unsigned int* io
 	// now convert the register value. the bitmask is an extention to 8 bits
 	// string will hold register value as string
 	char regVal[MAX_LINE];
-	sprintf(regVal, "%08x", ioRege[reg]&0xffffffff);
+	sprintf(regVal, "%08X", ioRege[reg]&0xffffffff);
 	strcat(toWrite, regVal);
 	// add next line
 	strcat(toWrite, "\n");
