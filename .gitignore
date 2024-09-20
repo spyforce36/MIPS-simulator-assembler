@@ -4,6 +4,8 @@
 *.ini
 *.exe
 *.sln
+*.ilk
+*.pdb
 
 .vs/
 .vscode/
@@ -12,3 +14,4 @@
 *.filters
 *.user
 *.xml
+simulator/Debug/*.*
