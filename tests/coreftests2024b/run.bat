@@ -23,9 +23,6 @@ fc trace.txt trace1.txt
 fc hwregtrace.txt hwregtrace1.txt
 fc cycles.txt cycles1.txt
 fc leds.txt leds1.txt
-
-REM errors:
 fc diskout.txt diskout1.txt
-
 
 cd ..
