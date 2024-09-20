@@ -1,0 +1,12 @@
+*.zip
+*.docx
+*.pdf
+*.ini
+*.exe
+*.sln
+
+.vs/
+.vscode/
+*/*/.txt
+
+simulator/Debug/

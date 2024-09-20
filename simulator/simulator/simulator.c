@@ -727,10 +727,10 @@ void Print_To_Files(FILE* mem_out, FILE* regout, FILE* trace, FILE* cycles, char
 		}
 		j += 1;
 	}
-	i = MAX_FILE - 2; // reset i and j to write disk out
+	i = MAX_DISK - 2; // reset i and j to write disk out
 	j = 0;
 	// write disk out same way as memout
-	while (strcmp(disk[i], "00000") == 0)
+	while ((strcmp(disk[i], "00000") == 0)||(strlen(disk[i]) == 0))
 		i -= 1;
 	while (j <= i) {
 		disk[j][LINE_LENGTH] = '\0';
