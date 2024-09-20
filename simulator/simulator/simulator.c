@@ -804,17 +804,18 @@ void checkirq2(unsigned int* ioRege, unsigned int count, int* irq2Times) {
 }
 // reads memory and disk input files(memin) and puts them in array(output)
 // the array will be written to memout or diskout eventually
+// reads memory and disk input files(memin) and puts them in array(output)
+// the array will be written to memout or diskout eventually
 char** memRead(char output[][MAX_LINE], FILE* memin) {
 	char** out = output;
 	// a string for the line being read to output
 	char* line, Lines[MAX_LINE];
+	int i = 0;
 	// the current memory line
 	line = Lines;
-	int i = 0;
-	while (!feof(memin)) { //place input file lines into array
-		fgets(line, MAX_LINE, memin);
+	while (fgets(line, MAX_LINE, memin)!=NULL) { //place input file lines into array
 		// null terminate
-		strcpy_s(output[i], MAX_LINE, line);
+		strcpy(output[i], line);
 		output[i][LINE_LENGTH] = '\0';
 		//printf("%s\n", output[i]);
 		
@@ -830,6 +831,7 @@ char** memRead(char output[][MAX_LINE], FILE* memin) {
 	fseek(memin, 0, SEEK_SET);
 	return out;
 }
+
 
 // opens files safely
 // out - pointer to file that is being opened
