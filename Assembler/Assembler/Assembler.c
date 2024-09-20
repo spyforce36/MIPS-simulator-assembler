@@ -11,6 +11,13 @@
 #define SIGNEX(v, sb) ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
 #define SIGNBIT_LOC 19
 
+int max(int a, int b)
+{
+	if (a>b)
+		return a;
+	return b;
+}
+
 // first part - utility
 
 // Label struct and related functions
@@ -25,6 +32,16 @@ typedef struct Label
     // a pointer to the next label
     struct Label* next;
 } label;
+
+void remove_comments(char * line)
+{
+	char *comment_char;
+	if ((comment_char = strchr(line, '#'))!=NULL)
+	{
+		*comment_char = '\n';
+		*(comment_char+1) = '\0';
+	}	
+}
 
 // this function creates a label from the given name and location
 label* create_label(char name[50], int location)
@@ -251,8 +268,10 @@ label* createLabelList(FILE *asembl) {
     // go all the way trough the file
     while (!feof(asembl)) {
         fgets(line, MAX_LINE, asembl);  // read a command from the assembler file
-        if (strstr(line, ".word") != NULL) continue;  //If line is .word, continue
+        remove_comments(line);
+		if (strstr(line, ".word") != NULL) continue;  //If line is .word, continue
 		remove_chars(line, strlen(line), "\t ", 2);
+		
 
         only_label_line = 0;  // reset only_label_line
         if (strcmp(line, "\n") == 0) continue;  //If line is blank, continue
@@ -434,7 +453,7 @@ MemoryLine *readLine(char *line, int *pos1, int *i, MemoryLine *head, int *k) {
 Memory* SecondRun(FILE* file) {
     // k - the index of the current char being read, i - the current position in the file
 	// pos1 - the last line of the memory file, pos - the address in .word commands, as an int
-    int k = 0, i = 0, pos1 = 0;
+    int k = 0, i = 0, pos1 = 0, last = 0, num_rows = 0;
 	// char - line will house the current line. tav1 will save the first character of the line and option, rd, rs, rt and are the command's values
 	// dots - used to detect labels. because something might be past them
 	char *comment_char;
@@ -444,11 +463,7 @@ Memory* SecondRun(FILE* file) {
 		char wo[6] = ".word"; // a string for comparison
 		int isword = 0; // booleand for .world detection
 		//printf("line in second run: %s \n", line);
-		if ((comment_char = strchr(line, '#'))!=NULL)
-		{
-			*comment_char = '\n';
-			*(comment_char+1) = '\0';
-		}	
+		remove_comments(line);
 		if (strstr(line, wo) != NULL) { // in case of the special .word order
 			isword = 1;
 		}
@@ -485,12 +500,19 @@ Memory* SecondRun(FILE* file) {
 			if (line[k] == '#')	continue;
 			if (line[k] == '\n') continue;
 		}
-		if (!isword) { // copy line in all not .world scenarios
+		if (isword) 
+			last = max(last, pos1);		
+		else{ // copy line in all not .world scenarios
 		mark:
 			head = readLine(line, &pos1, &i, head, &k);
+			if (strstr(line, "$imm") != NULL) // I command
+				num_rows+=2;
+			else
+				num_rows++;
 		}
 	}
-	return create_mem(head, pos1);  // create memory structure and return it to main function
+	last = max(last, num_rows - 1);		
+	return create_mem(head, last);  // create memory structure and return it to main function
 }
 
 //helpful function for printdatatofile - prints rd,rs,rt into the memin file
@@ -687,8 +709,8 @@ void LableChange(MemoryLine* head, label* lb)
 // part 3 - the main function
 
 // the main takes two arguments, the input file and the output file. indexes start with 1 because argv[0] is the program itself
-int main(int argc , char *argv[]) { //{//
-	//char *argv[] = {"asm.exe", "binom.asm", "memin.txt"};
+int main(int argc , char *argv[]) { //{//, char *argv[]
+	// char *argv[] = {"asm.exe", "a.asm", "memin.txt"};
 
     // open the input file. doing so in the main function will allow us to have infinite length file names
     // why i call it "asembl"? because of what it is
