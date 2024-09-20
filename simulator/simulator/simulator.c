@@ -687,7 +687,7 @@ void updateDiskTimer(unsigned int* ioRege) {
 	if (ioRege[17]) {
 		diskTimer++;
 		// reached 1024 cycles
-		if (diskTimer >= 1024) {
+		if (diskTimer > 1024) {
 			// reset disk command
 			ioRege[14] = 0;
 			// and disk status
@@ -909,7 +909,7 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 // the main function
 // argc - number of command arguments(always 12)
 // argv - command arguments(names of all the files)
-int main(int argc, char* argv[]) { // , char* argv[]
+int main(int argc , char* argv[]) { //, char* argv[]
 	
 	// char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout1.txt", "regout1.txt", "trace1.txt",
 	//  "hwregtrace1.txt", "cycles1.txt", "leds1.txt", "display7seg1.txt", "diskout1.txt", "monitor1.txt", "monitor1.yuv"};
@@ -934,7 +934,7 @@ int main(int argc, char* argv[]) { // , char* argv[]
 	disk = memRead(diskArr, diskin); // read the disk using same function
 	MemoryLine* current = malloc(sizeof(MemoryLine)); // current line structure
 	while (!feof(memin)) {	 // start reading input file line by line and process it update the disk timer. this wil deal with irq1
-		updateDiskTimer(ioRege); 
+		 
 		checkirq2(ioRege, count, irq2Times); // deal with irq2
 		pc = checkirq(ioRege, pc, memin); // move pc in case of an irq event
 		current = Create(memin, current); // copy line to struct
@@ -944,6 +944,7 @@ int main(int argc, char* argv[]) { // , char* argv[]
 			pc = Opcode_Operation(current, rege, ioRege, pc, memin, out, hwregtrace, count, monitor_array, leds, display, disk); // perform opcode operation then go to correct row.
 			moveFP(memin, pc); // move file pointer to correct row
 			count = updateclks(count, ioRege); //update clock cycles
+			updateDiskTimer(ioRege);
 			updateTimer(ioRege); // update the timer
 		}
 		else { // in case of a halt. just update clock cycle and leave
