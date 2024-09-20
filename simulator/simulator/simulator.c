@@ -26,7 +26,7 @@
 int isirqEvent = 0;
 // global integer - length of irq2 trigger time array
 int irq2count;
-
+int now_nullify_timer = 0;
 // this two global integers are related to disk operation
 // disk timer - counts clock cycles with busy disk
 int diskTimer = 0;
@@ -67,13 +67,19 @@ void updateTimer(unsigned int* ioRege) {
 	// reset irqstatus0 if timer did not tick
 	ioRege[3] = 0;
 	// check timer enable before updating
-	if (ioRege[11] != 0 && ioRege[12] < ioRege[13]) {
-		ioRege[12]++;
+	if (now_nullify_timer == 1)
+	{
+		now_nullify_timer = 0;
+		return;
+	}
+	if (ioRege[11] != 0 ) {
 		// now we check if the timer event happend
-		if (ioRege[12] == ioRege[13]) {
+		if (ioRege[12] > ioRege[13]) {
 			ioRege[3] = 1;
 			ioRege[12] = 0;
 		}
+		ioRege[12]++;
+
 	}
 }
 
@@ -632,6 +638,10 @@ int out(MemoryLine* current, int* rege, unsigned int* ioRege, unsigned int cycle
 			monitor_array[ioRege[20]] = ioRege[21]&0xff;
 			////printf("(%d, %d)\n", ioRege[20]/256, ioRege[20]%256);
 		}
+		if ((rege[current->rs] + rege[current->rt] == 12))
+		{
+			now_nullify_timer = 1;
+		}
 		pc = update_pc(pc, current);
 	}
 	return pc;
@@ -912,7 +922,7 @@ int updateclks(unsigned int count, unsigned int *ioRege) {
 int main(int argc , char* argv[]) { //, char* argv[]
 	
 	// char *argv[] = {"sim.exe", "memin.txt", "diskin.txt", "irq2in.txt", "memout1.txt", "regout1.txt", "trace1.txt",
-	//  "hwregtrace1.txt", "cycles1.txt", "leds1.txt", "display7seg1.txt", "diskout1.txt", "monitor1.txt", "monitor1.yuv"};
+	//  "hwregtr0ace1.txt", "cycles1.txt", "leds1.txt", "display7seg1.txt", "diskout1.txt", "monitor1.txt", "monitor1.yuv"};
 
 	int Reg_Array[16] = { 0 }; // Reg_Array - array for regular registers
 	int* rege = Reg_Array, pc = 0; // Rege - pointer to register array, pc - current pc, count - current clock cycle, ioRege - pointer to HW register array
@@ -934,7 +944,9 @@ int main(int argc , char* argv[]) { //, char* argv[]
 	disk = memRead(diskArr, diskin); // read the disk using same function
 	MemoryLine* current = malloc(sizeof(MemoryLine)); // current line structure
 	while (!feof(memin)) {	 // start reading input file line by line and process it update the disk timer. this wil deal with irq1
-		 
+		
+		//printf("ioRege[12]:%d, ioRege[13]:%d,  count: %d\n", ioRege[12], ioRege[13], count);
+		updateTimer(ioRege); // update the timer
 		checkirq2(ioRege, count, irq2Times); // deal with irq2
 		pc = checkirq(ioRege, pc, memin); // move pc in case of an irq event
 		current = Create(memin, current); // copy line to struct
@@ -945,7 +957,6 @@ int main(int argc , char* argv[]) { //, char* argv[]
 			moveFP(memin, pc); // move file pointer to correct row
 			count = updateclks(count, ioRege); //update clock cycles
 			updateDiskTimer(ioRege);
-			updateTimer(ioRege); // update the timer
 		}
 		else { // in case of a halt. just update clock cycle and leave
 			count = updateclks(count, ioRege); //update clock cycles
